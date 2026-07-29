@@ -12,6 +12,7 @@ enum FailureType: string
     case CommandFailed = 'command_failed';
     case RebaseConflict = 'rebase_conflict';
     case LockUnavailable = 'lock_unavailable';
+    case PullRequestFailed = 'pull_request_failed';
     case Unknown = 'unknown';
 
     /**
@@ -23,7 +24,9 @@ enum FailureType: string
     public function retryable(): bool
     {
         return match ($this) {
-            self::CommandFailed, self::Unknown => true,
+            // The commit and the push already succeeded when a pull request
+            // fails, so retrying only re-attempts the forge call.
+            self::CommandFailed, self::PullRequestFailed, self::Unknown => true,
             default => false,
         };
     }

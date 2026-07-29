@@ -13,6 +13,7 @@ use Viovenia\GitSync\DataTransferObjects\Config\EventConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\GitSyncConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\LoggingConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullConfigDTO;
+use Viovenia\GitSync\DataTransferObjects\Config\PullRequestConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PushConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\QueueConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\RepositoryConfigDTO;
@@ -20,8 +21,10 @@ use Viovenia\GitSync\DataTransferObjects\Config\SafetyNetConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Content\PathCollectionDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\BranchNameDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\CommitAuthorDTO;
+use Viovenia\GitSync\DataTransferObjects\Git\RepositorySlugDTO;
 use Viovenia\GitSync\Enums\ConflictBehaviour;
 use Viovenia\GitSync\Enums\ContentEvent;
+use Viovenia\GitSync\Enums\PullRequestDriver;
 use Viovenia\GitSync\Enums\PullStrategy;
 use Viovenia\GitSync\Exceptions\ConfigurationException;
 
@@ -58,6 +61,7 @@ final class GitSyncConfigResolver
             commit: $this->commit($this->section($raw, 'commit')),
             pull: $this->pull($this->section($raw, 'pull')),
             push: $this->push($this->section($raw, 'push')),
+            pullRequest: $this->pullRequest($this->section($raw, 'pull_request')),
             debounce: $this->debounce($this->section($raw, 'debounce')),
             queue: $this->queue($this->section($raw, 'queue')),
             safetyNet: $this->safetyNet($this->section($raw, 'safety_net')),
@@ -148,6 +152,26 @@ final class GitSyncConfigResolver
             remote: $this->string($raw, 'push.remote', 'origin'),
             branch: $branch !== null ? BranchNameDTO::fromString($branch) : null,
             forceWithLease: $this->boolean($raw, 'push.force_with_lease', false),
+        );
+    }
+
+    /** @param array<string, mixed> $raw */
+    private function pullRequest(array $raw): PullRequestConfigDTO
+    {
+        $driver = $this->enum(PullRequestDriver::class, $raw, 'pull_request.driver', PullRequestDriver::GitHub);
+        $repository = $this->nullableString($raw, 'pull_request.repository');
+
+        return new PullRequestConfigDTO(
+            driver: $driver,
+            apiUrl: $this->nullableString($raw, 'pull_request.api_url') ?? $driver->defaultApiUrl(),
+            token: $this->nullableString($raw, 'pull_request.token'),
+            repository: $repository !== null ? RepositorySlugDTO::fromString($repository) : null,
+            base: BranchNameDTO::fromString($this->string($raw, 'pull_request.base', 'main')),
+            titleTemplate: $this->string($raw, 'pull_request.title_template', 'Content changes from {head}'),
+            bodyTemplate: $this->string($raw, 'pull_request.body_template', '{files}'),
+            draft: $this->boolean($raw, 'pull_request.draft', false),
+            labels: $this->stringList($raw, 'pull_request.labels'),
+            reuseOpen: $this->boolean($raw, 'pull_request.reuse_open', true),
         );
     }
 

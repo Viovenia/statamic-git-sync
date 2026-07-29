@@ -77,6 +77,38 @@ Either way the rebase or merge is aborted first — the working tree is never le
 
 **Pitfall:** pinning `branch` while the server is on a different one means every push targets a branch nobody is looking at. `doctor` warns when the two disagree.
 
+## `pull_request`
+
+Only read when `strategy` is `pull-request`. Instead of pushing to the branch everybody deploys from, the addon pushes the branch this instance is on and opens a pull request against `base`.
+
+| Key | Env | Default | Effect |
+|---|---|---|---|
+| `driver` | `STATAMIC_GIT_SYNC_PR_DRIVER` | `github` | Which forge. Only GitHub today. |
+| `api_url` | `STATAMIC_GIT_SYNC_PR_API_URL` | `https://api.github.com` | Change for GitHub Enterprise. |
+| `token` | `STATAMIC_GIT_SYNC_PR_TOKEN` | `null` | Needs pull request write access on the repository. |
+| `repository` | `STATAMIC_GIT_SYNC_PR_REPOSITORY` | `null` | `owner/name`. Null derives it from the remote URL. |
+| `base` | `STATAMIC_GIT_SYNC_PR_BASE` | `main` | The branch the pull request asks to merge into. |
+| `title_template` | `STATAMIC_GIT_SYNC_PR_TITLE` | `Content changes from {head}` | Placeholders: `{summary}` `{count}` `{user}` `{head}` `{base}` `{files}`. |
+| `body_template` | `STATAMIC_GIT_SYNC_PR_BODY` | a note plus `{files}` | Same placeholders. |
+| `draft` | `STATAMIC_GIT_SYNC_PR_DRAFT` | `false` | Open as a draft. |
+| `labels` | — | `[]` | Applied after creation; a failure there does not fail the sync. |
+| `reuse_open` | `STATAMIC_GIT_SYNC_PR_REUSE_OPEN` | `true` | Append to the open pull request rather than opening one per sync. |
+
+**The rule that decides whether this mode fits you:** it never checks out another branch. Doing so would swap the content files on disk underneath the editor who just saved them. The head of the pull request is always the branch the instance is already on — so put the authoring instance on its own branch (`content/staging`, say) and point `base` at `main`.
+
+```env
+STATAMIC_GIT_SYNC_STRATEGY=pull-request
+STATAMIC_GIT_SYNC_PUSH=true
+STATAMIC_GIT_SYNC_PR_TOKEN=github_pat_…
+STATAMIC_GIT_SYNC_PR_BASE=main
+```
+
+**Pitfall:** `push.enabled` must be on. Without it the branch never reaches the forge and the pull request would reference nothing. `doctor` reports it as an error.
+
+**Pitfall:** with `reuse_open` off, every debounce window opens another pull request. On a site with an active editor that is dozens per day.
+
+**Pitfall:** a run whose commit and push succeeded but whose pull request failed is reported as retryable — the work is safe on the branch, only the proposal is missing.
+
 ## `debounce`
 
 | Key | Env | Default | Effect |

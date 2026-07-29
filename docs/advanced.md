@@ -13,6 +13,7 @@ Five events, each carrying DTOs rather than loose scalars, so the payload stays 
 | `SyncSkipped` | disabled, dry run, or another run held the lock | context + result |
 | `SyncFailed` | anything went wrong | context + result |
 | `ConflictDetected` | a rebase or merge conflicted and was rolled back | context + `FailureDTO` |
+| `PullRequestOpened` | a pull request was created (not when commits were appended to an open one) | context + `PullRequestDTO` |
 
 `ConflictDetected` is followed by `SyncFailed` — listen to whichever suits you.
 
@@ -96,23 +97,50 @@ final class OnlyPublishedEntriesFilter implements PathFilterContract
 
 The allow list still applies first — git is only ever asked about `content.paths`. This filter is the second gate, not a way to widen the first.
 
+## Another forge for pull request mode
+
+`PullRequestClientContract` has two methods, and the strategy knows nothing about GitHub:
+
+```php
+use Viovenia\GitSync\Contracts\PullRequestClientContract;
+
+final class GitlabPullRequestClient implements PullRequestClientContract
+{
+    public function findOpen(RepositorySlugDTO $repository, BranchNameDTO $head): ?PullRequestDTO
+    {
+        // GET /projects/{id}/merge_requests?state=opened&source_branch=…
+    }
+
+    public function open(PullRequestRequestDTO $request): PullRequestDTO
+    {
+        // POST /projects/{id}/merge_requests
+    }
+}
+```
+
+```php
+$this->app->singleton(PullRequestClientContract::class, GitlabPullRequestClient::class);
+```
+
+Throw `PullRequestFailedException` rather than returning null on failure: it carries the retry decision, and a retry there is cheap because the commit and the push have already happened.
+
 ## Your own sync strategy
 
-This is the seam the pull-request mode on the roadmap will use.
+Two ship today — `commit` and `pull-request`. A third is a class and a registration:
 
 ```php
 use Viovenia\GitSync\Contracts\SyncStrategyContract;
 
-final class PullRequestSyncStrategy implements SyncStrategyContract
+final class DeployHookSyncStrategy implements SyncStrategyContract
 {
     public function identifier(): string
     {
-        return 'pull-request';
+        return 'deploy-hook';
     }
 
     public function execute(SyncContextDTO $context): SyncResultDTO
     {
-        // branch, commit, push, open a PR
+        // commit, push, then poke whatever needs poking
     }
 }
 ```
@@ -121,14 +149,14 @@ Register it and select it:
 
 ```php
 $this->app->extend(SyncStrategyResolverContract::class, function (SyncStrategyResolver $resolver) {
-    $resolver->register($this->app->make(PullRequestSyncStrategy::class));
+    $resolver->register($this->app->make(DeployHookSyncStrategy::class));
 
     return $resolver;
 });
 ```
 
 ```env
-STATAMIC_GIT_SYNC_STRATEGY=pull-request
+STATAMIC_GIT_SYNC_STRATEGY=deploy-hook
 ```
 
 Throw from `execute()` rather than catching: `SyncManager` owns the failure policy, the events and the logging. A strategy that swallows its own errors makes all three impossible. Throw a `GitSyncException` subclass so the retry decision is made from the failure type rather than guessed.

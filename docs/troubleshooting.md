@@ -94,6 +94,21 @@ git -C /var/www/site pull --rebase
 
 If the server should never integrate remote work, set `pull.enabled` to `false`.
 
+## Pull request mode does nothing, or refuses to start
+
+`doctor` answers all four of the usual causes:
+
+- **No token.** `STATAMIC_GIT_SYNC_PR_TOKEN` needs pull request write access on the repository.
+- **Pushing is off.** The branch has to reach the forge first; `STATAMIC_GIT_SYNC_PUSH=true`.
+- **Head equals base.** The instance is on the branch it is supposed to propose into. Put the authoring instance on its own branch — this mode never checks out another one, on purpose.
+- **The slug could not be derived.** A remote that is a local path has no forge behind it; set `pull_request.repository` to `owner/name`.
+
+## A pull request was not opened, but the commit exists
+
+That is the designed outcome of a forge failure: the commit and the push already happened, so nothing is lost and the run is marked retryable. The log line carries the HTTP status and the response body, with credentials redacted.
+
+If it says nothing was opened but there is no error either, `reuse_open` found an existing pull request for the branch and pushed the commits onto it — which is the normal case from the second sync onwards.
+
 ## A change was made on disk and never committed
 
 The event path only sees changes made through Statamic. Files edited over SSH or SFTP produce no event. That is what the safety net is for — within its cron window it commits them anyway. If it is not running:

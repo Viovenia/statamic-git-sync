@@ -23,6 +23,7 @@ final readonly class GitSyncConfigDTO
         public CommitConfigDTO $commit,
         public PullConfigDTO $pull,
         public PushConfigDTO $push,
+        public PullRequestConfigDTO $pullRequest,
         public DebounceConfigDTO $debounce,
         public QueueConfigDTO $queue,
         public SafetyNetConfigDTO $safetyNet,

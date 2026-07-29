@@ -48,6 +48,7 @@ The suffix says what the class does. `ArchitectureTest` enforces the forbidden o
 | Queues work | `*Dispatcher` |
 | Executes | `*Runner` |
 | Tests a condition | `*Check` |
+| Talks to an external service over HTTP | `*Client` |
 | Queue job / listener / command / exception | `*Job` / `*Subscriber` / `*Command` / `*Exception` |
 | Event | verb in the past: `SyncCompleted` |
 | Enum | a noun: `SyncOutcome` |
@@ -71,7 +72,7 @@ src/
 ├── Jobs/SyncContentJob.php      thin: middleware + one call
 ├── Repositories/                GitRepository, DebounceRepository, NullDebounceRepository
 ├── Services/                    Process/ Git/ Sync/ Content/ Diagnostics/
-├── Strategies/                  CommitSyncStrategy (v2: PullRequestSyncStrategy)
+├── Strategies/                  CommitSyncStrategy, PullRequestSyncStrategy
 ├── Subscribers/                 ContentEventSubscriber — auto-registered by Statamic
 └── Support/GitSyncConfigResolver.php
 ```
@@ -114,6 +115,12 @@ SemVer from git tags. Currently below 1.0, where **Composer treats every minor a
 
 `main` is protected: work on a branch and open a pull request. Merges are squash-only.
 
+## Pull request mode
+
+`PullRequestSyncStrategy` pushes the branch the instance is on and opens a pull request against `pull_request.base`. **It never checks out another branch** — that would swap content files on disk underneath the editor who just saved them. `PullRequestCheck` fails the setup when head and base are the same. Do not "fix" this by adding a checkout.
+
+The forge lives behind `PullRequestClientContract`; `GithubPullRequestClient` is the only implementation. A run that committed and pushed but failed to open the pull request is **retryable** — the work is safe on the branch.
+
 ## Roadmap
 
-`pull-request` strategy (branch + PR instead of a direct push) — the seam is `SyncStrategyContract` plus the `strategy` config key. Nothing else is planned; do not build ahead of it.
+Notification channels (the events are the seam), a control panel widget showing recent syncs, and GitLab/Gitea clients. Do not build ahead of these.

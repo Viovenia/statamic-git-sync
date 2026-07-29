@@ -7,6 +7,7 @@ namespace Viovenia\GitSync\DataTransferObjects\Sync;
 use Viovenia\GitSync\DataTransferObjects\Content\ChangeSetDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\CommitReferenceDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\PushResultDTO;
+use Viovenia\GitSync\DataTransferObjects\PullRequest\PullRequestDTO;
 use Viovenia\GitSync\Enums\SyncOutcome;
 
 final readonly class SyncResultDTO
@@ -19,6 +20,8 @@ final readonly class SyncResultDTO
         public ?FailureDTO $failure = null,
         public ?string $reason = null,
         public DurationDTO $duration = new DurationDTO(0.0),
+        /** Set by the pull-request strategy; null for a plain commit. */
+        public ?PullRequestDTO $pullRequest = null,
     ) {}
 
     public static function committed(
@@ -26,8 +29,9 @@ final readonly class SyncResultDTO
         CommitReferenceDTO $commit,
         ?PushResultDTO $push,
         DurationDTO $duration,
+        ?PullRequestDTO $pullRequest = null,
     ): self {
-        return new self(SyncOutcome::Committed, $changes, $commit, $push, null, null, $duration);
+        return new self(SyncOutcome::Committed, $changes, $commit, $push, null, null, $duration, $pullRequest);
     }
 
     public static function nothingToCommit(DurationDTO $duration): self
@@ -76,6 +80,7 @@ final readonly class SyncResultDTO
             'files' => $this->changes->count(),
             'commit' => $this->commit?->shortSha(),
             'pushed' => $this->push?->describe(),
+            'pull_request' => $this->pullRequest?->describe(),
             'reason' => $this->reason,
             'duration_ms' => $this->duration->inMilliseconds(),
         ];
