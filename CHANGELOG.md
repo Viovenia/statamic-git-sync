@@ -20,6 +20,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Notifications** for failures, conflicts, opened pull requests and — off by default — successful commits. Built on Laravel's notification system with mail out of the box and optional Slack via `laravel/slack-notification-channel`. Sent inline rather than queued, because a failure notification that depends on the queue is useless exactly when the queue is what broke.
 - `NotificationCheck` in `doctor`: notifications enabled without a recipient is an error, a Slack channel without the channel package a warning.
 
+- **A "Recent content syncs" control panel widget**, fed by a JSONL history file under `storage/`. A file rather than the cache, because `cache:clear` is part of most deploys; a file rather than a database table, because a flat-file Solo site often has no database. It is a display, never a source of truth — writing it can never fail a sync, and an unwritable path is a warning in `doctor`, not an error.
+- `HistoryRepositoryContract` with file and null implementations, `HistorySubscriber`, and `HistoryCheck`.
+
 ### Changed
 
 - `FailureType` gained `PullRequestFailed`, which is retryable: when the forge call fails the commit and push have already succeeded, so a retry only re-attempts the proposal.

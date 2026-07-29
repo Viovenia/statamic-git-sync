@@ -41,5 +41,4 @@ Every arrow is an interface. Every layer can be replaced or faked on its own, wh
 
 ## Roadmap
 
-- A control panel widget showing recent syncs.
 - GitLab and Gitea implementations of `PullRequestClientContract`.

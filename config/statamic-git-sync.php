@@ -267,6 +267,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | History
+    |--------------------------------------------------------------------------
+    |
+    | Feeds the "Recent content syncs" control panel widget. One JSON object
+    | per line, appended under a lock, trimmed to max_entries.
+    |
+    | A file rather than the cache, because `cache:clear` is part of most
+    | deploys and an empty widget after every deploy is worse than no widget.
+    | A file rather than a database table, because a flat-file Solo site often
+    | has no database.
+    |
+    | This is a display, never a source of truth — git is the record of what
+    | was committed. Losing the file costs the widget its contents and nothing
+    | else, and writing to it can never fail a sync.
+    |
+    | Add the widget in config/statamic/cp.php:
+    |
+    |     'widgets' => [
+    |         ['type' => 'recent_syncs', 'width' => 50, 'limit' => 5],
+    |     ],
+    |
+    */
+
+    'history' => [
+        'enabled' => env('STATAMIC_GIT_SYNC_HISTORY', true),
+        'path' => env('STATAMIC_GIT_SYNC_HISTORY_PATH'),
+        'max_entries' => (int) env('STATAMIC_GIT_SYNC_HISTORY_MAX', 100),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Notifications
     |--------------------------------------------------------------------------
     |

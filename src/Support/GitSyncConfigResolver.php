@@ -11,6 +11,7 @@ use Viovenia\GitSync\DataTransferObjects\Config\ContentConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\DebounceConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\EventConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\GitSyncConfigDTO;
+use Viovenia\GitSync\DataTransferObjects\Config\HistoryConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\LoggingConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\NotificationConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullConfigDTO;
@@ -48,7 +49,17 @@ final class GitSyncConfigResolver
         'pull_request_opened',
     ];
 
-    public function __construct(private readonly ConfigRepository $config) {}
+    /**
+     * @param  string  $defaultHistoryPath  where the history file goes when the
+     *                                      config does not say. Injected rather
+     *                                      than derived, so this class keeps its
+     *                                      one job and stays testable without an
+     *                                      application.
+     */
+    public function __construct(
+        private readonly ConfigRepository $config,
+        private readonly string $defaultHistoryPath = '',
+    ) {}
 
     public function resolve(): GitSyncConfigDTO
     {
@@ -74,6 +85,7 @@ final class GitSyncConfigResolver
             debounce: $this->debounce($this->section($raw, 'debounce')),
             queue: $this->queue($this->section($raw, 'queue')),
             safetyNet: $this->safetyNet($this->section($raw, 'safety_net')),
+            history: $this->history($this->section($raw, 'history')),
             notifications: $this->notifications($this->section($raw, 'notifications')),
             logging: $this->logging($this->section($raw, 'logging')),
             events: $this->events($this->section($raw, 'events')),
@@ -228,6 +240,22 @@ final class GitSyncConfigResolver
         return new SafetyNetConfigDTO(
             enabled: $this->boolean($raw, 'safety_net.enabled', true),
             cron: $cron,
+        );
+    }
+
+    /** @param array<string, mixed> $raw */
+    private function history(array $raw): HistoryConfigDTO
+    {
+        $max = $this->integer($raw, 'history.max_entries', 100);
+
+        if ($max < 1) {
+            throw ConfigurationException::invalidValue('history.max_entries', $max, 'at least one entry');
+        }
+
+        return new HistoryConfigDTO(
+            enabled: $this->boolean($raw, 'history.enabled', true),
+            path: $this->nullableString($raw, 'history.path') ?? $this->defaultHistoryPath,
+            maxEntries: $max,
         );
     }
 

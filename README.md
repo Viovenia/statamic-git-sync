@@ -177,9 +177,20 @@ STATAMIC_GIT_SYNC_NOTIFY_MAIL=ops@example.com
 
 Failures, conflicts and opened pull requests by default; successful commits are available but off, because on a busy site that is a channel nobody reads. Details in [docs/configuration.md](docs/configuration.md#notifications).
 
+## Control panel widget
+
+A dashboard widget showing the last few syncs — what was committed, what failed, which pull request it went into. Add it in `config/statamic/cp.php`:
+
+```php
+'widgets' => [
+    ['type' => 'recent_syncs', 'width' => 50, 'limit' => 5],
+],
+```
+
+It reads a JSONL file under `storage/`, which survives the `cache:clear` in your deploy. Losing it costs the widget its contents and nothing else — git remains the record of what was committed.
+
 ## Roadmap
 
-- A control panel widget showing recent syncs.
 - GitLab and Gitea implementations of `PullRequestClientContract`.
 
 ## Contributing

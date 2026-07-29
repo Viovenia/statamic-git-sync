@@ -146,6 +146,32 @@ This is what makes a cache outage a delay of at most one cron window rather than
 
 **Pitfall:** it needs `php artisan schedule:run` in the crontab. `doctor` warns when it has never been seen to run.
 
+## `history`
+
+Feeds the "Recent content syncs" control panel widget. One JSON object per line, appended under a lock, trimmed to `max_entries`.
+
+| Key | Env | Default | Effect |
+|---|---|---|---|
+| `enabled` | `STATAMIC_GIT_SYNC_HISTORY` | `true` | |
+| `path` | `STATAMIC_GIT_SYNC_HISTORY_PATH` | `storage/statamic-git-sync/history.jsonl` | |
+| `max_entries` | `STATAMIC_GIT_SYNC_HISTORY_MAX` | `100` | Older lines are dropped. |
+
+Add the widget in `config/statamic/cp.php`:
+
+```php
+'widgets' => [
+    ['type' => 'recent_syncs', 'width' => 50, 'limit' => 5],
+],
+```
+
+A file rather than the cache, because `cache:clear` is part of most deploys and an empty widget after every deploy is worse than no widget. A file rather than a database table, because a flat-file Solo site often has no database, and a migration is a poor thing to force on somebody who only wanted their content committed.
+
+**This is a display, never a source of truth.** Git is the record of what was committed. Losing the file costs the widget its contents and nothing else.
+
+**Pitfall:** writing history can never fail a sync — an unwritable path leaves one debug log line, and `doctor` reports it as a *warning* rather than an error.
+
+**Pitfall:** runs that found nothing to commit are not recorded. On a quiet site the safety net alone would otherwise write "nothing to commit" every fifteen minutes.
+
 ## `notifications`
 
 Built on the addon's own events, so switching this off and writing your own listener is always an option — see [advanced.md](advanced.md).
