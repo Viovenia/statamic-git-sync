@@ -29,11 +29,20 @@ use Viovenia\GitSync\Notifications\SyncCompletedNotification;
 use Viovenia\GitSync\Notifications\SyncFailedNotification;
 use Viovenia\GitSync\Tests\TestCase;
 
-#[WithConfig('statamic-git-sync.notifications.enabled', true)]
-#[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
+/**
+ * The subscriber decides at boot which events to listen to, so every test
+ * here has to have its configuration in place before the container is built.
+ *
+ * That is why each one carries its own method-level attributes rather than
+ * sharing class-level ones: on the oldest supported testbench, class-level
+ * attributes are applied after the providers have booted, and the subscriber
+ * would already have decided to listen to nothing.
+ */
 final class NotificationSubscriberTest extends TestCase
 {
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     public function a_failed_sync_reaches_the_configured_mail_recipient(): void
     {
         Notification::fake();
@@ -48,6 +57,8 @@ final class NotificationSubscriberTest extends TestCase
     }
 
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     public function a_conflict_sends_the_conflict_message_and_not_the_generic_failure_one(): void
     {
         Notification::fake();
@@ -64,6 +75,8 @@ final class NotificationSubscriberTest extends TestCase
     }
 
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     public function an_opened_pull_request_is_announced(): void
     {
         Notification::fake();
@@ -74,6 +87,8 @@ final class NotificationSubscriberTest extends TestCase
     }
 
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     #[WithConfig('statamic-git-sync.notifications.on', ['sync_failed'])]
     public function events_that_are_not_selected_are_not_even_listened_to(): void
     {
@@ -86,6 +101,7 @@ final class NotificationSubscriberTest extends TestCase
 
     #[Test]
     #[WithConfig('statamic-git-sync.notifications.enabled', false)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     public function nothing_is_sent_while_notifications_are_off(): void
     {
         Notification::fake();
@@ -96,6 +112,7 @@ final class NotificationSubscriberTest extends TestCase
     }
 
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
     #[WithConfig('statamic-git-sync.notifications.mail.to', [])]
     #[WithConfig('statamic-git-sync.notifications.slack.channel', null)]
     public function without_a_recipient_nothing_is_attempted(): void
@@ -108,6 +125,8 @@ final class NotificationSubscriberTest extends TestCase
     }
 
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     #[WithConfig('statamic-git-sync.notifications.on', ['sync_completed'])]
     public function a_run_that_committed_nothing_is_not_worth_a_message(): void
     {
@@ -123,6 +142,8 @@ final class NotificationSubscriberTest extends TestCase
     }
 
     #[Test]
+    #[WithConfig('statamic-git-sync.notifications.enabled', true)]
+    #[WithConfig('statamic-git-sync.notifications.mail.to', ['ops@example.com'])]
     #[WithConfig('statamic-git-sync.notifications.slack.channel', '#content')]
     public function a_configured_slack_channel_is_added_as_a_second_route(): void
     {

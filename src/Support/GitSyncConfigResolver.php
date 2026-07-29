@@ -41,6 +41,13 @@ final class GitSyncConfigResolver
 {
     public const CONFIG_KEY = 'statamic-git-sync';
 
+    /** Used when the key is missing entirely; mirrors the shipped config file. */
+    private const DEFAULT_NOTIFICATION_EVENTS = [
+        'sync_failed',
+        'conflict_detected',
+        'pull_request_opened',
+    ];
+
     public function __construct(private readonly ConfigRepository $config) {}
 
     public function resolve(): GitSyncConfigDTO
@@ -227,9 +234,17 @@ final class GitSyncConfigResolver
     /** @param array<string, mixed> $raw */
     private function notifications(array $raw): NotificationConfigDTO
     {
+        // An absent key means "the defaults", not "nothing". Laravel's
+        // mergeConfigFrom is a shallow merge, so a published config file that
+        // predates this section — or any partial override — would otherwise
+        // leave the list empty and silently send nothing at all.
+        $selected = array_key_exists('on', $raw)
+            ? $this->stringList($raw, 'notifications.on')
+            : self::DEFAULT_NOTIFICATION_EVENTS;
+
         $events = [];
 
-        foreach ($this->stringList($raw, 'notifications.on') as $value) {
+        foreach ($selected as $value) {
             $event = NotificationEvent::tryFrom($value);
 
             if ($event === null) {

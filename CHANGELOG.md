@@ -24,6 +24,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `FailureType` gained `PullRequestFailed`, which is retryable: when the forge call fails the commit and push have already succeeded, so a retry only re-attempts the proposal.
 
+### Fixed
+
+- A partially overridden config section no longer silences the part it did not mention. Laravel's `mergeConfigFrom` is a shallow merge, so a published config file that sets only some keys of a section replaces the package default for that whole section — which would have left `notifications.on` empty while `doctor` still reported notifications as enabled. A missing list now means "the defaults" rather than "nothing".
+
 ## [0.1.0] - 2026-07-29
 
 First release.

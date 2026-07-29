@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Viovenia\GitSync\Enums\ConflictBehaviour;
 use Viovenia\GitSync\Enums\ContentEvent;
+use Viovenia\GitSync\Enums\NotificationEvent;
 use Viovenia\GitSync\Enums\PullStrategy;
 use Viovenia\GitSync\Exceptions\ConfigurationException;
 use Viovenia\GitSync\Support\GitSyncConfigResolver;
@@ -99,6 +100,70 @@ final class GitSyncConfigResolverTest extends TestCase
 
         $this->assertTrue($config->events->isEnabled(ContentEvent::EntrySaved));
         $this->assertFalse($config->events->isEnabled(ContentEvent::EntryDeleted));
+    }
+
+    /**
+     * Laravel's mergeConfigFrom is a shallow merge: a config file that sets
+     * only part of a section replaces the package default for the whole
+     * section. A missing list must therefore mean "the defaults", or an older
+     * published config file would silently switch notifications off while
+     * still reporting them as enabled.
+     */
+    #[Test]
+    public function a_missing_notification_event_list_falls_back_to_the_defaults(): void
+    {
+        $config = $this->resolve([
+            'content' => ['paths' => ['content']],
+            'notifications' => ['enabled' => true],
+        ]);
+
+        $this->assertTrue($config->notifications->wants(NotificationEvent::SyncFailed));
+        $this->assertTrue($config->notifications->wants(NotificationEvent::ConflictDetected));
+        $this->assertTrue($config->notifications->wants(NotificationEvent::PullRequestOpened));
+        $this->assertFalse(
+            $config->notifications->wants(NotificationEvent::SyncCompleted),
+            'Successful commits stay off by default.',
+        );
+    }
+
+    #[Test]
+    public function an_explicitly_empty_event_list_is_respected(): void
+    {
+        $config = $this->resolve([
+            'content' => ['paths' => ['content']],
+            'notifications' => ['enabled' => true, 'on' => []],
+        ]);
+
+        $this->assertSame([], $config->notifications->events);
+    }
+
+    #[Test]
+    public function an_unknown_notification_event_names_the_key(): void
+    {
+        $this->expectException(ConfigurationException::class);
+        $this->expectExceptionMessage('notifications.on');
+
+        $this->resolve([
+            'content' => ['paths' => ['content']],
+            'notifications' => ['on' => ['everything']],
+        ]);
+    }
+
+    #[Test]
+    public function mail_recipients_are_accepted_as_a_list_or_as_an_address_to_name_map(): void
+    {
+        $list = $this->resolve([
+            'content' => ['paths' => ['content']],
+            'notifications' => ['mail' => ['to' => ['ops@example.com']]],
+        ]);
+
+        $map = $this->resolve([
+            'content' => ['paths' => ['content']],
+            'notifications' => ['mail' => ['to' => ['ops@example.com' => 'Ops']]],
+        ]);
+
+        $this->assertSame(['ops@example.com' => 'ops@example.com'], $list->notifications->mailRecipients);
+        $this->assertSame(['ops@example.com' => 'Ops'], $map->notifications->mailRecipients);
     }
 
     #[Test]
