@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Viovenia/statamic-git-sync/security/policy
+    about: Please report privately by email rather than in a public issue.
+
+  - name: It is not committing
+    url: https://github.com/Viovenia/statamic-git-sync/blob/main/docs/troubleshooting.md
+    about: Start with `php artisan statamic:git-sync:doctor` and the troubleshooting page.
+
+  - name: Statamic itself
+    url: https://statamic.com/support
+    about: Questions about Statamic rather than this addon.

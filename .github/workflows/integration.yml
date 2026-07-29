@@ -1,0 +1,43 @@
+name: Integration
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Real git
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, gd
+          coverage: none
+
+      - uses: ramsey/composer-install@v3
+
+      # The temporary repositories inherit nothing from the runner, but git
+      # refuses to commit at all without a global identity somewhere.
+      - name: Give git an identity
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+          git config --global init.defaultBranch main
+
+      - name: Integration tests against a real repository
+        run: composer run test:integration

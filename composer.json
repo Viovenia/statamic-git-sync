@@ -1,0 +1,81 @@
+{
+    "name": "viovenia/statamic-git-sync",
+    "description": "Automatic Git commits and pushes for Statamic content changes. A free, event-driven alternative to Statamic Pro's Git Automation.",
+    "keywords": [
+        "statamic",
+        "statamic-addon",
+        "git",
+        "version-control",
+        "flat-file",
+        "automation"
+    ],
+    "type": "statamic-addon",
+    "license": "MIT",
+    "homepage": "https://github.com/Viovenia/statamic-git-sync",
+    "support": {
+        "issues": "https://github.com/Viovenia/statamic-git-sync/issues",
+        "source": "https://github.com/Viovenia/statamic-git-sync"
+    },
+    "authors": [
+        {
+            "name": "Marcel Wagner",
+            "email": "info@viovenia.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "statamic/cms": "^5.0 || ^6.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^9.0 || ^10.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^10.5 || ^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Viovenia\\GitSync\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Viovenia\\GitSync\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --exclude-group integration",
+        "test:integration": "phpunit --group integration",
+        "test:all": "phpunit",
+        "lint": "pint --test",
+        "fix": "pint",
+        "analyse": "phpstan analyse",
+        "check": [
+            "@lint",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "extra": {
+        "statamic": {
+            "name": "Git Sync",
+            "description": "Automatic Git commits on content changes"
+        },
+        "laravel": {
+            "providers": [
+                "Viovenia\\GitSync\\ServiceProvider"
+            ],
+            "aliases": {
+                "GitSync": "Viovenia\\GitSync\\Facades\\GitSync"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pixelfear/composer-dist-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
