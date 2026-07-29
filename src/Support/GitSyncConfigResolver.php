@@ -12,6 +12,7 @@ use Viovenia\GitSync\DataTransferObjects\Config\DebounceConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\EventConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\GitSyncConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\LoggingConfigDTO;
+use Viovenia\GitSync\DataTransferObjects\Config\NotificationConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullRequestConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PushConfigDTO;
@@ -24,6 +25,7 @@ use Viovenia\GitSync\DataTransferObjects\Git\CommitAuthorDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\RepositorySlugDTO;
 use Viovenia\GitSync\Enums\ConflictBehaviour;
 use Viovenia\GitSync\Enums\ContentEvent;
+use Viovenia\GitSync\Enums\NotificationEvent;
 use Viovenia\GitSync\Enums\PullRequestDriver;
 use Viovenia\GitSync\Enums\PullStrategy;
 use Viovenia\GitSync\Exceptions\ConfigurationException;
@@ -65,6 +67,7 @@ final class GitSyncConfigResolver
             debounce: $this->debounce($this->section($raw, 'debounce')),
             queue: $this->queue($this->section($raw, 'queue')),
             safetyNet: $this->safetyNet($this->section($raw, 'safety_net')),
+            notifications: $this->notifications($this->section($raw, 'notifications')),
             logging: $this->logging($this->section($raw, 'logging')),
             events: $this->events($this->section($raw, 'events')),
         );
@@ -219,6 +222,75 @@ final class GitSyncConfigResolver
             enabled: $this->boolean($raw, 'safety_net.enabled', true),
             cron: $cron,
         );
+    }
+
+    /** @param array<string, mixed> $raw */
+    private function notifications(array $raw): NotificationConfigDTO
+    {
+        $events = [];
+
+        foreach ($this->stringList($raw, 'notifications.on') as $value) {
+            $event = NotificationEvent::tryFrom($value);
+
+            if ($event === null) {
+                throw ConfigurationException::unknownOption('notifications.on', $value, implode(', ', array_map(
+                    static fn (NotificationEvent $case): string => $case->value,
+                    NotificationEvent::cases(),
+                )));
+            }
+
+            $events[] = $event;
+        }
+
+        /** @var array<string, mixed> $mail */
+        $mail = is_array($raw['mail'] ?? null) ? $raw['mail'] : [];
+        /** @var array<string, mixed> $slack */
+        $slack = is_array($raw['slack'] ?? null) ? $raw['slack'] : [];
+
+        return new NotificationConfigDTO(
+            enabled: $this->boolean($raw, 'notifications.enabled', false),
+            events: $events,
+            mailRecipients: $this->recipients($mail),
+            slackChannel: $this->nullableString($slack, 'notifications.slack.channel'),
+        );
+    }
+
+    /**
+     * Accepts both forms people write: a plain list of addresses, and the
+     * address => name map Laravel's mail routing understands.
+     *
+     * @param  array<string, mixed>  $raw
+     * @return array<string, string>
+     */
+    private function recipients(array $raw): array
+    {
+        $value = $raw['to'] ?? [];
+
+        if (is_string($value)) {
+            $value = [$value];
+        }
+
+        if (! is_array($value)) {
+            throw ConfigurationException::invalidValue('notifications.mail.to', $value, 'an array of addresses');
+        }
+
+        $recipients = [];
+
+        foreach ($value as $key => $entry) {
+            if (! is_string($entry)) {
+                throw ConfigurationException::invalidValue('notifications.mail.to', $entry, 'an email address');
+            }
+
+            if (is_string($key)) {
+                $recipients[$key] = $entry;
+
+                continue;
+            }
+
+            $recipients[$entry] = $entry;
+        }
+
+        return $recipients;
     }
 
     /** @param array<string, mixed> $raw */

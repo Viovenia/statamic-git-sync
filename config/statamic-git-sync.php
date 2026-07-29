@@ -267,6 +267,47 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    |
+    | Who hears about it when something happens. Built on the addon's own
+    | events, so switching this off and writing your own listener is always an
+    | option — see docs/advanced.md.
+    |
+    | on         Which events to send. sync_completed is off by default: on a
+    |            site with an active editor that is one message per debounce
+    |            window, and a channel that is mostly noise gets muted.
+    | mail.to    Address => name. A plain list of addresses works too.
+    | slack      A channel such as "#content". Requires
+    |            `composer require laravel/slack-notification-channel` and a
+    |            bot token in config/services.php — without the package the
+    |            Slack channel is quietly skipped rather than failing the run.
+    |
+    | A conflict sends the conflict notification, not the generic failure one,
+    | even though both events fire.
+    |
+    */
+
+    'notifications' => [
+        'enabled' => env('STATAMIC_GIT_SYNC_NOTIFICATIONS', false),
+
+        'on' => [
+            'sync_failed',
+            'conflict_detected',
+            'pull_request_opened',
+        ],
+
+        'mail' => [
+            'to' => array_filter([env('STATAMIC_GIT_SYNC_NOTIFY_MAIL')]),
+        ],
+
+        'slack' => [
+            'channel' => env('STATAMIC_GIT_SYNC_NOTIFY_SLACK_CHANNEL'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Logging
     |--------------------------------------------------------------------------
     |

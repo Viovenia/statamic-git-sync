@@ -166,9 +166,19 @@ It **never checks out another branch** — that would swap the content files on 
 
 Within a debounce window the first run opens the pull request and later runs push commits onto it, rather than opening one per save. Details in [docs/configuration.md](docs/configuration.md#pull_request).
 
+## Notifications
+
+Mail out of the box, Slack with one extra package:
+
+```env
+STATAMIC_GIT_SYNC_NOTIFICATIONS=true
+STATAMIC_GIT_SYNC_NOTIFY_MAIL=ops@example.com
+```
+
+Failures, conflicts and opened pull requests by default; successful commits are available but off, because on a busy site that is a channel nobody reads. Details in [docs/configuration.md](docs/configuration.md#notifications).
+
 ## Roadmap
 
-- Notification channels for conflicts and opened pull requests, built on the events above.
 - A control panel widget showing recent syncs.
 - GitLab and Gitea implementations of `PullRequestClientContract`.
 

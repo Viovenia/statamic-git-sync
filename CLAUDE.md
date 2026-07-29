@@ -49,6 +49,7 @@ The suffix says what the class does. `ArchitectureTest` enforces the forbidden o
 | Executes | `*Runner` |
 | Tests a condition | `*Check` |
 | Talks to an external service over HTTP | `*Client` |
+| Laravel notification | `*Notification` |
 | Queue job / listener / command / exception | `*Job` / `*Subscriber` / `*Command` / `*Exception` |
 | Event | verb in the past: `SyncCompleted` |
 | Enum | a noun: `SyncOutcome` |
@@ -73,7 +74,8 @@ src/
 ├── Repositories/                GitRepository, DebounceRepository, NullDebounceRepository
 ├── Services/                    Process/ Git/ Sync/ Content/ Diagnostics/
 ├── Strategies/                  CommitSyncStrategy, PullRequestSyncStrategy
-├── Subscribers/                 ContentEventSubscriber — auto-registered by Statamic
+├── Notifications/               mail + optional Slack, sent inline on purpose
+├── Subscribers/                 ContentEventSubscriber, NotificationSubscriber
 └── Support/GitSyncConfigResolver.php
 ```
 
@@ -121,6 +123,16 @@ SemVer from git tags. Currently below 1.0, where **Composer treats every minor a
 
 The forge lives behind `PullRequestClientContract`; `GithubPullRequestClient` is the only implementation. A run that committed and pushed but failed to open the pull request is **retryable** — the work is safe on the branch.
 
+## Notifications
+
+`NotificationSubscriber` listens to the addon's own events — nothing is baked into `SyncManager`. Only the configured events are subscribed at all.
+
+Sent **inline, never queued**: a failure notification that depends on the queue is useless exactly when the queue is what broke. Nothing here runs in a control panel request, so blocking briefly costs nobody anything. Do not "improve" this with `ShouldQueue`.
+
+Slack is optional. `laravel/slack-notification-channel` is a **dev** dependency so the code can reference `SlackMessage` and the tests can cover it; `class_exists()` guards keep it working for consumers who do not install it. Never move it to `require`.
+
+A conflict fires both `ConflictDetected` and `SyncFailed`; only the conflict notification is sent.
+
 ## Roadmap
 
-Notification channels (the events are the seam), a control panel widget showing recent syncs, and GitLab/Gitea clients. Do not build ahead of these.
+A control panel widget showing recent syncs (history persistence: JSONL under `storage/`), and GitLab/Gitea clients. Do not build ahead of these.
