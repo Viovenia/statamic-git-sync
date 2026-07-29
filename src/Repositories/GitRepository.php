@@ -100,6 +100,21 @@ final class GitRepository implements GitRepositoryContract
         return $result->successful();
     }
 
+    public function remoteUrl(string $remote): ?string
+    {
+        $result = $this->processes->run(
+            $this->commands->new()->add('remote', 'get-url', $remote)->build(),
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $url = $result->trimmedOutput();
+
+        return $url === '' ? null : $url;
+    }
+
     public function identity(): ?CommitAuthorDTO
     {
         $name = $this->processes->run($this->commands->new()->add('config', 'user.name')->build());

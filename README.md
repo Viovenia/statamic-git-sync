@@ -134,7 +134,7 @@ Every option lives in `config/statamic-git-sync.php` and has an `env()` override
 
 Listen to these to send notifications, collect metrics, or trigger a deploy:
 
-`SyncStarted` · `SyncCompleted` · `SyncSkipped` · `SyncFailed` · `ConflictDetected`
+`SyncStarted` · `SyncCompleted` · `SyncSkipped` · `SyncFailed` · `ConflictDetected` · `PullRequestOpened`
 
 Each carries typed DTOs rather than loose scalars. See [docs/advanced.md](docs/advanced.md).
 
@@ -147,14 +147,30 @@ Each carries typed DTOs rather than loose scalars. See [docs/advanced.md](docs/a
 | Automatic on content change | yes | no | yes |
 | Manual git UI in the CP | no | yes | no |
 | Debounced commits | no | — | yes |
+| Pull request instead of push | no | no | yes |
 | Self-check command | no | no | yes |
 | Scheduled safety net | no | — | yes |
 
+## Pull request mode
+
+Instead of pushing straight to the branch everybody deploys from, the addon can push the branch the instance is on and open a pull request against another one — so content changes get reviewed like code. The built-in Pro automation cannot do this.
+
+```env
+STATAMIC_GIT_SYNC_STRATEGY=pull-request
+STATAMIC_GIT_SYNC_PUSH=true
+STATAMIC_GIT_SYNC_PR_TOKEN=github_pat_…
+STATAMIC_GIT_SYNC_PR_BASE=main
+```
+
+It **never checks out another branch** — that would swap the content files on disk underneath the editor who just saved them. So the authoring instance lives on its own branch (`content/staging`), and `base` is where it should be merged. `doctor` refuses the setup when the two are the same.
+
+Within a debounce window the first run opens the pull request and later runs push commits onto it, rather than opening one per save. Details in [docs/configuration.md](docs/configuration.md#pull_request).
+
 ## Roadmap
 
-- **Pull request mode** — open a branch and a PR instead of pushing to the default branch. Something the Pro automation cannot do; the architecture already has the seam for it (`SyncStrategyContract`).
-- Notification channels for conflicts, built on the events above.
+- Notification channels for conflicts and opened pull requests, built on the events above.
 - A control panel widget showing recent syncs.
+- GitLab and Gitea implementations of `PullRequestClientContract`.
 
 ## Contributing
 

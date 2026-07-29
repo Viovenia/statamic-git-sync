@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Pull request mode** (`strategy => 'pull-request'`). Commits the change, pushes the branch this instance is on, and opens a pull request against a configurable base branch instead of pushing straight to it — something the built-in Pro automation cannot do. Reuses an already open pull request by default, so a busy editor produces one pull request rather than one per debounce window.
+- `PullRequestClientContract` with a GitHub REST implementation, so a second forge is a new class rather than a change to the strategy.
+- `PullRequestOpened` event, fired only when a pull request is actually created.
+- `PullRequestCheck` in `doctor`: token present, pushing enabled, repository slug derivable, and the head branch distinct from the base — the mistake everybody makes on their first afternoon with this mode.
+- `SyncResultDTO::$pullRequest`, and the pull request in the log context of a run.
+- `GitRepositoryContract::remoteUrl()`.
+
+### Changed
+
+- `FailureType` gained `PullRequestFailed`, which is retryable: when the forge call fails the commit and push have already succeeded, so a retry only re-attempts the proposal.
+
 ## [0.1.0] - 2026-07-29
 
 First release.

@@ -163,6 +163,49 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pull request
+    |--------------------------------------------------------------------------
+    |
+    | Only read when strategy is "pull-request". Instead of pushing straight to
+    | the branch everybody deploys from, the addon pushes the branch this
+    | instance is on and opens a pull request against `base`.
+    |
+    | This mode never checks out another branch — that would swap the content
+    | files on disk underneath the editor who just saved them. Run the
+    | authoring instance on its own branch, and point `base` at the branch it
+    | should be merged into. `statamic:git-sync:doctor` refuses the setup when
+    | the two are the same.
+    |
+    | driver       Which forge. Only "github" today.
+    | api_url      Change for GitHub Enterprise.
+    | token        A token with pull request write access on the repository.
+    | repository   "owner/name". Null derives it from the remote URL.
+    | base         The branch the pull request asks to merge into.
+    | reuse_open   Append to the open pull request instead of opening one per
+    |              sync. Leave this on unless you enjoy notification noise.
+    |
+    | Templates take {summary} {count} {user} {head} {base} {files}.
+    |
+    */
+
+    'pull_request' => [
+        'driver' => env('STATAMIC_GIT_SYNC_PR_DRIVER', 'github'),
+        'api_url' => env('STATAMIC_GIT_SYNC_PR_API_URL'),
+        'token' => env('STATAMIC_GIT_SYNC_PR_TOKEN'),
+        'repository' => env('STATAMIC_GIT_SYNC_PR_REPOSITORY'),
+        'base' => env('STATAMIC_GIT_SYNC_PR_BASE', 'main'),
+        'title_template' => env('STATAMIC_GIT_SYNC_PR_TITLE', 'Content changes from {head}'),
+        'body_template' => env(
+            'STATAMIC_GIT_SYNC_PR_BODY',
+            "Automated by [statamic-git-sync](https://github.com/Viovenia/statamic-git-sync).\n\n{files}",
+        ),
+        'draft' => env('STATAMIC_GIT_SYNC_PR_DRAFT', false),
+        'labels' => [],
+        'reuse_open' => env('STATAMIC_GIT_SYNC_PR_REUSE_OPEN', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Debounce
     |--------------------------------------------------------------------------
     |

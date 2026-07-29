@@ -44,6 +44,9 @@ interface GitRepositoryContract
 
     public function hasRemote(string $remote): bool;
 
+    /** The configured URL of a remote, or null when it has none. */
+    public function remoteUrl(string $remote): ?string;
+
     /** The `user.name` / `user.email` git is configured with, if any. */
     public function identity(): ?CommitAuthorDTO;
 

@@ -13,6 +13,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Log\LogManager;
 use Psr\Log\LoggerInterface;
 use Statamic\Providers\AddonServiceProvider;
@@ -28,6 +29,7 @@ use Viovenia\GitSync\Contracts\HealthCheckContract;
 use Viovenia\GitSync\Contracts\HealthCheckRunnerContract;
 use Viovenia\GitSync\Contracts\PathFilterContract;
 use Viovenia\GitSync\Contracts\ProcessRunnerContract;
+use Viovenia\GitSync\Contracts\PullRequestClientContract;
 use Viovenia\GitSync\Contracts\SyncDispatcherContract;
 use Viovenia\GitSync\Contracts\SyncLockContract;
 use Viovenia\GitSync\Contracts\SyncManagerContract;
@@ -37,10 +39,12 @@ use Viovenia\GitSync\DataTransferObjects\Config\ContentConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\DebounceConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\GitSyncConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullConfigDTO;
+use Viovenia\GitSync\DataTransferObjects\Config\PullRequestConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PushConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\QueueConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\RepositoryConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\SafetyNetConfigDTO;
+use Viovenia\GitSync\Enums\PullRequestDriver;
 use Viovenia\GitSync\Repositories\DebounceRepository;
 use Viovenia\GitSync\Repositories\GitRepository;
 use Viovenia\GitSync\Repositories\NullDebounceRepository;
@@ -53,6 +57,7 @@ use Viovenia\GitSync\Services\Diagnostics\Checks\ConfigurationCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\ContentPathsCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\GitBinaryCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\GitIdentityCheck;
+use Viovenia\GitSync\Services\Diagnostics\Checks\PullRequestCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\QueueDriverCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\RemoteCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\RepositoryCheck;
@@ -62,11 +67,13 @@ use Viovenia\GitSync\Services\Git\GitCommandBuilder;
 use Viovenia\GitSync\Services\Git\GitRepositoryLocator;
 use Viovenia\GitSync\Services\Git\PorcelainParser;
 use Viovenia\GitSync\Services\Process\ProcessRunner;
+use Viovenia\GitSync\Services\PullRequest\GithubPullRequestClient;
 use Viovenia\GitSync\Services\Sync\SyncDispatcher;
 use Viovenia\GitSync\Services\Sync\SyncLock;
 use Viovenia\GitSync\Services\Sync\SyncManager;
 use Viovenia\GitSync\Services\Sync\SyncStrategyResolver;
 use Viovenia\GitSync\Strategies\CommitSyncStrategy;
+use Viovenia\GitSync\Strategies\PullRequestSyncStrategy;
 use Viovenia\GitSync\Subscribers\ContentEventSubscriber;
 use Viovenia\GitSync\Support\GitSyncConfigResolver;
 
@@ -100,6 +107,7 @@ final class ServiceProvider extends AddonServiceProvider
         BranchCheck::class,
         RemoteCheck::class,
         ContentPathsCheck::class,
+        PullRequestCheck::class,
         CacheLockSupportCheck::class,
         QueueDriverCheck::class,
         SafetyNetCheck::class,
@@ -156,6 +164,7 @@ final class ServiceProvider extends AddonServiceProvider
         $this->app->singleton(CommitConfigDTO::class, static fn (Application $app): CommitConfigDTO => $app->make(GitSyncConfigDTO::class)->commit);
         $this->app->singleton(PullConfigDTO::class, static fn (Application $app): PullConfigDTO => $app->make(GitSyncConfigDTO::class)->pull);
         $this->app->singleton(PushConfigDTO::class, static fn (Application $app): PushConfigDTO => $app->make(GitSyncConfigDTO::class)->push);
+        $this->app->singleton(PullRequestConfigDTO::class, static fn (Application $app): PullRequestConfigDTO => $app->make(GitSyncConfigDTO::class)->pullRequest);
         $this->app->singleton(DebounceConfigDTO::class, static fn (Application $app): DebounceConfigDTO => $app->make(GitSyncConfigDTO::class)->debounce);
         $this->app->singleton(QueueConfigDTO::class, static fn (Application $app): QueueConfigDTO => $app->make(GitSyncConfigDTO::class)->queue);
         $this->app->singleton(SafetyNetConfigDTO::class, static fn (Application $app): SafetyNetConfigDTO => $app->make(GitSyncConfigDTO::class)->safetyNet);
@@ -202,9 +211,20 @@ final class ServiceProvider extends AddonServiceProvider
     private function registerSync(): void
     {
         $this->app->singleton(
+            PullRequestClientContract::class,
+            static fn (Application $app): PullRequestClientContract => match ($app->make(PullRequestConfigDTO::class)->driver) {
+                PullRequestDriver::GitHub => new GithubPullRequestClient(
+                    $app->make(HttpFactory::class),
+                    $app->make(PullRequestConfigDTO::class),
+                ),
+            },
+        );
+
+        $this->app->singleton(
             SyncStrategyResolverContract::class,
             static fn (Application $app): SyncStrategyResolver => new SyncStrategyResolver([
                 $app->make(CommitSyncStrategy::class),
+                $app->make(PullRequestSyncStrategy::class),
             ]),
         );
 

@@ -41,6 +41,6 @@ Every arrow is an interface. Every layer can be replaced or faked on its own, wh
 
 ## Roadmap
 
-- **Pull request mode** — a branch and a PR instead of a push to the default branch. The seam exists (`SyncStrategyContract`); the implementation does not yet.
-- Notification channels for conflicts, built on the existing events.
+- Notification channels for conflicts and opened pull requests, built on the existing events.
 - A control panel widget showing recent syncs.
+- GitLab and Gitea implementations of `PullRequestClientContract`.
