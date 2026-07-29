@@ -17,9 +17,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `SyncResultDTO::$pullRequest`, and the pull request in the log context of a run.
 - `GitRepositoryContract::remoteUrl()`.
 
+- **Notifications** for failures, conflicts, opened pull requests and — off by default — successful commits. Built on Laravel's notification system with mail out of the box and optional Slack via `laravel/slack-notification-channel`. Sent inline rather than queued, because a failure notification that depends on the queue is useless exactly when the queue is what broke.
+- `NotificationCheck` in `doctor`: notifications enabled without a recipient is an error, a Slack channel without the channel package a warning.
+
 ### Changed
 
 - `FailureType` gained `PullRequestFailed`, which is retryable: when the forge call fails the commit and push have already succeeded, so a retry only re-attempts the proposal.
+
+### Fixed
+
+- A partially overridden config section no longer silences the part it did not mention. Laravel's `mergeConfigFrom` is a shallow merge, so a published config file that sets only some keys of a section replaces the package default for that whole section — which would have left `notifications.on` empty while `doctor` still reported notifications as enabled. A missing list now means "the defaults" rather than "nothing".
 
 ## [0.1.0] - 2026-07-29
 

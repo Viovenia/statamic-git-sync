@@ -146,6 +146,33 @@ This is what makes a cache outage a delay of at most one cron window rather than
 
 **Pitfall:** it needs `php artisan schedule:run` in the crontab. `doctor` warns when it has never been seen to run.
 
+## `notifications`
+
+Built on the addon's own events, so switching this off and writing your own listener is always an option — see [advanced.md](advanced.md).
+
+| Key | Env | Default | Effect |
+|---|---|---|---|
+| `enabled` | `STATAMIC_GIT_SYNC_NOTIFICATIONS` | `false` | |
+| `on` | — | `sync_failed`, `conflict_detected`, `pull_request_opened` | Which events to send. Also available: `sync_completed`. |
+| `mail.to` | `STATAMIC_GIT_SYNC_NOTIFY_MAIL` | `[]` | A list of addresses, or an `address => name` map. |
+| `slack.channel` | `STATAMIC_GIT_SYNC_NOTIFY_SLACK_CHANNEL` | `null` | A channel such as `#content`. |
+
+Slack needs one more step, because since Laravel 11 the channel lives in its own package and uses a bot token rather than a webhook:
+
+```bash
+composer require laravel/slack-notification-channel
+```
+
+plus a bot token in `config/services.php`. Without the package the Slack route is skipped quietly rather than failing the run, and `doctor` says so.
+
+**Pitfall:** `sync_completed` is one message per debounce window. On a site with an active editor that is a channel nobody reads within a week, which costs you the messages that mattered. Leave it off unless the site is quiet.
+
+**Pitfall:** a conflict fires both `ConflictDetected` and `SyncFailed`. Only the conflict message is sent — two messages for one problem is noise.
+
+**Pitfall:** notifications are sent inline, not queued. That is deliberate: a failure notification that depends on the queue is useless exactly when the queue is what broke. Nothing here runs inside a control panel request.
+
+**Pitfall:** enabled with no recipient at all is reported as an *error* by `doctor` — somebody believing they are told about failures while they are not is worse than knowing they are not.
+
 ## `logging`
 
 | Key | Env | Default | Effect |

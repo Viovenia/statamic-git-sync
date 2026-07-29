@@ -29,6 +29,7 @@
     },
     "require-dev": {
         "laravel/pint": "^1.18",
+        "laravel/slack-notification-channel": "^3.0",
         "orchestra/testbench": "^9.0 || ^10.0",
         "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^10.5 || ^11.0"
