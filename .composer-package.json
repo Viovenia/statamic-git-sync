@@ -1,0 +1,133 @@
+{
+    "$comment": "Decision record written by the composer-package skill. Read this before re-running it in this directory.",
+    "schemaVersion": 1,
+    "generatedAt": "2026-07-29",
+    "language": {
+        "prompts": "de",
+        "documentation": "en",
+        "note": "Prompts and conversation in German; all generated documentation and code comments in English, as is customary for an open source addon."
+    },
+    "vision": {
+        "summary": "A Statamic addon that automatically commits — and optionally pushes — content changes made in the control panel.",
+        "differentiator": "The equivalent core feature is Pro only. statamic/spock is archived, Gitamic is paid and manual, git-auto-push is a blunt 24h cron. This is free, MIT and event driven, and it runs on Statamic Solo.",
+        "kind": "framework package (Statamic addon)",
+        "consumer": "Statamic sites keeping flat-file content in git",
+        "integratesWith": "Statamic 5 and 6",
+        "distribution": "Private GitHub repository for now. Packagist and the Statamic marketplace are a later, deliberate step."
+    },
+    "identity": {
+        "package": "viovenia/statamic-git-sync",
+        "namespace": "Viovenia\\GitSync\\",
+        "type": "statamic-addon",
+        "license": "MIT",
+        "author": { "name": "Marcel Wagner", "email": "info@viovenia.com", "role": "Developer" },
+        "php": "^8.2",
+        "statamic": "^5.0 || ^6.0",
+        "versionStrategy": "tags only, no version key in composer.json"
+    },
+    "toolchain": {
+        "tests": "phpunit",
+        "style": "laravel/pint (laravel preset, declare_strict_types)",
+        "staticAnalysis": "phpstan level 6",
+        "testHarness": "orchestra/testbench via Statamic\\Testing\\AddonTestCase",
+        "scripts": ["test", "test:integration", "test:all", "lint", "fix", "analyse", "check"]
+    },
+    "architecture": {
+        "namingConvention": "role suffix per class: Contract, DTO, Manager, Repository, Builder, Resolver, Strategy, Dispatcher, Runner, Check, Job, Command, Exception. Forbidden: Factory, Provider (except ServiceProvider), Helper, Util, Handler.",
+        "principles": [
+            "contract-first, singletons bound in ServiceProvider, constructor injection only",
+            "no inheritance except AddonServiceProvider and the exception hierarchy",
+            "no associative arrays between classes — DTOs and enums only",
+            "exactly one process gate (Services\\Process\\ProcessRunner) and one git gate (Repositories\\GitRepository)",
+            "config() only in ServiceProvider and GitSyncConfigResolver",
+            "nothing throws into a control panel save request"
+        ],
+        "enforcedBy": "tests/Architecture/ArchitectureTest.php",
+        "keyDecisions": {
+            "debounce": "trailing edge, 60s default, cache-marker based; degrades to NullDebounceRepository without lock support",
+            "dataSafety": "the cache is timing only. What gets committed is read from git status at run time; a scheduled safety net (*/15) commits whatever the event path missed, so a cache outage costs a delay, never a commit.",
+            "concurrency": "Laravel job middleware (Skip, WithoutOverlapping, ThrottlesExceptions) plus SyncLock for the console and scheduler paths",
+            "failurePolicy": "SyncManager::handleFailure() only. Retryability comes from FailureType, not from message matching.",
+            "jobOptions": "SyncJobOptionsDTO travels with the job because Laravel calls middleware() without the container"
+        }
+    },
+    "documentation": {
+        "readme": "full: why, install, quickstart, how it works, comparison table, roadmap",
+        "docs": ["index", "installation", "configuration", "usage", "advanced", "troubleshooting"],
+        "companions": ["CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE"]
+    },
+    "releases": {
+        "scheme": "SemVer, starting at 0.1.0",
+        "changelog": "hand written, Keep a Changelog, entry lands in the same pull request as the change",
+        "process": "manual tags; no release workflow",
+        "backwardCompatibility": "below 1.0 Composer treats every minor as breaking (^0.1 excludes 0.2). Stated in CHANGELOG.md and CONTRIBUTING.md."
+    },
+    "ai": {
+        "leadFile": "CLAUDE.md",
+        "agents": ["package-tester", "api-designer", "docs-writer", "release-manager"],
+        "mcp": ["context7"]
+    },
+    "forge": {
+        "host": "github",
+        "owner": "Viovenia",
+        "repository": "Viovenia/statamic-git-sync",
+        "visibility": "private",
+        "workflows": ["tests.yml", "integration.yml", "quality.yml", "dependabot.yml"],
+        "templates": ["pull_request_template.md", "ISSUE_TEMPLATE/bug_report.yml", "ISSUE_TEMPLATE/feature_request.yml", "ISSUE_TEMPLATE/config.yml", "CODEOWNERS"],
+        "settings": ["squash-only merges", "auto-delete merged branches", "branch protection on main", "issues enabled", "discussions enabled"]
+    },
+    "constraintsVerifiedVia": {
+        "context7": [
+            "Statamic AddonServiceProvider, AddonTestCase, event names",
+            "Laravel queue job middleware (Skip, WithoutOverlapping, ThrottlesExceptions)",
+            "Laravel Process facade, faking and preventStrayProcesses",
+            "Laravel atomic cache locks and the stores that support them"
+        ],
+        "localVendor": [
+            "vendor/statamic/cms/src/Events/ — every event class name checked against the installed version",
+            "vendor/statamic/cms/src/Providers/AddonServiceProvider.php — Subscribers/ is the auto-registered folder, config file must be named after the addon slug",
+            "composer update --dry-run — Statamic 5 and 6 both resolve, so the CI matrix needs no exclusions"
+        ],
+        "cleanRoom": "vendor/statamic/cms/src/Git/ was never opened. Statamic licence clause 4 forbids reusing its code; behaviour was reimplemented from the public documentation and public events only."
+    },
+    "verification": {
+        "pint": "clean",
+        "phpstan": "level 6, no errors",
+        "tests": "79 passing (unit, feature, architecture, integration)",
+        "composerValidate": "valid; the 'could not detect root package version' notice is expected in a repository without tags"
+    },
+    "fileInventory": {
+        "note": "Paths only. Per-file hashes were deliberately omitted: this is the first run, everything here was generated in one pass, and git already tracks every subsequent change more accurately than a stored hash would.",
+        "generated": [
+            "composer.json", "phpunit.xml.dist", "phpstan.neon.dist", "pint.json",
+            ".gitignore", ".gitattributes", ".editorconfig", ".mcp.json",
+            "config/statamic-git-sync.php",
+            "src/ServiceProvider.php",
+            "src/Concerns/{FiresSyncEvents,WritesSyncLog,RedactsCredentials}.php",
+            "src/Console/Commands/{SyncCommand,StatusCommand,DoctorCommand}.php",
+            "src/Contracts/*.php",
+            "src/DataTransferObjects/{Sync,Content,Git,Config,Diagnostics}/*.php",
+            "src/Enums/*.php",
+            "src/Events/*.php",
+            "src/Exceptions/*.php",
+            "src/Facades/GitSync.php",
+            "src/Jobs/SyncContentJob.php",
+            "src/Repositories/{GitRepository,DebounceRepository,NullDebounceRepository}.php",
+            "src/Services/{Process,Git,Sync,Content,Diagnostics}/**/*.php",
+            "src/Strategies/CommitSyncStrategy.php",
+            "src/Subscribers/ContentEventSubscriber.php",
+            "src/Support/GitSyncConfigResolver.php",
+            "tests/{TestCase.php,Concerns,Unit,Feature,Integration,Architecture}",
+            "docs/*.md",
+            "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", "CLAUDE.md",
+            ".claude/agents/*.md",
+            ".github/workflows/*.yml", ".github/dependabot.yml", ".github/pull_request_template.md",
+            ".github/ISSUE_TEMPLATE/*", ".github/CODEOWNERS"
+        ]
+    },
+    "openPoints": [
+        "Ask Statamic whether a free addon committing on content events via public events is acceptable, before the repository goes public.",
+        "Decide when to publish on Packagist and list on the Statamic marketplace.",
+        "Roadmap v2: pull-request strategy (branch + PR instead of a direct push)."
+    ]
+}

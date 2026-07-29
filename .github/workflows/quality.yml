@@ -1,0 +1,44 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Style and static analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, gd
+          coverage: none
+
+      - uses: ramsey/composer-install@v3
+
+      - name: Validate composer.json
+        # In a repository without tags composer prints "could not detect the
+        # root package version". That is expected and does not affect the
+        # exit code.
+        run: composer validate --strict
+
+      - name: Code style
+        run: composer run lint
+
+      - name: Static analysis
+        run: composer run analyse

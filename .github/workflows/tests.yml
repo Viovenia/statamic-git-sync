@@ -1,0 +1,54 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.claude/**']
+
+# An overtaken push costs nothing.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+        statamic: ['^5.0', '^6.0']
+        dependencies: [highest]
+        include:
+          # Proves the declared floor actually installs.
+          - php: '8.2'
+            statamic: '^5.0'
+            dependencies: lowest
+
+    name: PHP ${{ matrix.php }} · Statamic ${{ matrix.statamic }} · ${{ matrix.dependencies }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, gd
+          coverage: none
+
+      - name: Pin Statamic
+        run: composer require "statamic/cms:${{ matrix.statamic }}" --no-update --no-interaction
+
+      - uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: ${{ matrix.dependencies }}
+
+      - name: Unit, feature and architecture tests
+        run: composer run test
