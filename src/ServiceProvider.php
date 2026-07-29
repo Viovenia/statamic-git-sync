@@ -27,6 +27,7 @@ use Viovenia\GitSync\Contracts\GitRepositoryContract;
 use Viovenia\GitSync\Contracts\GitRepositoryLocatorContract;
 use Viovenia\GitSync\Contracts\HealthCheckContract;
 use Viovenia\GitSync\Contracts\HealthCheckRunnerContract;
+use Viovenia\GitSync\Contracts\HistoryRepositoryContract;
 use Viovenia\GitSync\Contracts\PathFilterContract;
 use Viovenia\GitSync\Contracts\ProcessRunnerContract;
 use Viovenia\GitSync\Contracts\PullRequestClientContract;
@@ -38,6 +39,7 @@ use Viovenia\GitSync\DataTransferObjects\Config\CommitConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\ContentConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\DebounceConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\GitSyncConfigDTO;
+use Viovenia\GitSync\DataTransferObjects\Config\HistoryConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\NotificationConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\PullRequestConfigDTO;
@@ -47,8 +49,10 @@ use Viovenia\GitSync\DataTransferObjects\Config\RepositoryConfigDTO;
 use Viovenia\GitSync\DataTransferObjects\Config\SafetyNetConfigDTO;
 use Viovenia\GitSync\Enums\PullRequestDriver;
 use Viovenia\GitSync\Repositories\DebounceRepository;
+use Viovenia\GitSync\Repositories\FileHistoryRepository;
 use Viovenia\GitSync\Repositories\GitRepository;
 use Viovenia\GitSync\Repositories\NullDebounceRepository;
+use Viovenia\GitSync\Repositories\NullHistoryRepository;
 use Viovenia\GitSync\Services\Content\CommitAuthorResolver;
 use Viovenia\GitSync\Services\Content\CommitMessageBuilder;
 use Viovenia\GitSync\Services\Content\ContentPathFilter;
@@ -58,6 +62,7 @@ use Viovenia\GitSync\Services\Diagnostics\Checks\ConfigurationCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\ContentPathsCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\GitBinaryCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\GitIdentityCheck;
+use Viovenia\GitSync\Services\Diagnostics\Checks\HistoryCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\NotificationCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\PullRequestCheck;
 use Viovenia\GitSync\Services\Diagnostics\Checks\QueueDriverCheck;
@@ -77,8 +82,10 @@ use Viovenia\GitSync\Services\Sync\SyncStrategyResolver;
 use Viovenia\GitSync\Strategies\CommitSyncStrategy;
 use Viovenia\GitSync\Strategies\PullRequestSyncStrategy;
 use Viovenia\GitSync\Subscribers\ContentEventSubscriber;
+use Viovenia\GitSync\Subscribers\HistorySubscriber;
 use Viovenia\GitSync\Subscribers\NotificationSubscriber;
 use Viovenia\GitSync\Support\GitSyncConfigResolver;
+use Viovenia\GitSync\Widgets\RecentSyncsWidget;
 
 /**
  * Wires every contract to its implementation, once, as a singleton.
@@ -100,6 +107,12 @@ final class ServiceProvider extends AddonServiceProvider
     protected $subscribe = [
         ContentEventSubscriber::class,
         NotificationSubscriber::class,
+        HistorySubscriber::class,
+    ];
+
+    /** @var list<class-string<\Statamic\Widgets\Widget>> */
+    protected $widgets = [
+        RecentSyncsWidget::class,
     ];
 
     /** @var list<class-string<HealthCheckContract>> */
@@ -113,6 +126,7 @@ final class ServiceProvider extends AddonServiceProvider
         ContentPathsCheck::class,
         PullRequestCheck::class,
         NotificationCheck::class,
+        HistoryCheck::class,
         CacheLockSupportCheck::class,
         QueueDriverCheck::class,
         SafetyNetCheck::class,
@@ -126,7 +140,22 @@ final class ServiceProvider extends AddonServiceProvider
         $this->registerGit();
         $this->registerContentServices();
         $this->registerSync();
+        $this->registerHistory();
         $this->registerDiagnostics();
+    }
+
+    private function registerHistory(): void
+    {
+        $this->app->singleton(
+            HistoryRepositoryContract::class,
+            static function (Application $app): HistoryRepositoryContract {
+                $config = $app->make(HistoryConfigDTO::class);
+
+                return $config->enabled
+                    ? new FileHistoryRepository($config, $app->make(LoggerInterface::class))
+                    : new NullHistoryRepository;
+            },
+        );
     }
 
     public function bootAddon(): void
@@ -150,10 +179,16 @@ final class ServiceProvider extends AddonServiceProvider
             GitSyncConfigResolver::CONFIG_KEY,
         );
 
+        // Statamic registers the view namespace too, but only once the addon
+        // is in the manifest. Registering it here as well keeps the widget
+        // renderable in a test harness and before `statamic:install`.
+        $this->loadViewsFrom(dirname(__DIR__).'/resources/views', 'statamic-git-sync');
+
         $this->app->singleton(
             GitSyncConfigResolver::class,
             static fn (Application $app): GitSyncConfigResolver => new GitSyncConfigResolver(
                 $app->make(ConfigRepository::class),
+                $app->storagePath('statamic-git-sync'.DIRECTORY_SEPARATOR.'history.jsonl'),
             ),
         );
 
@@ -174,6 +209,7 @@ final class ServiceProvider extends AddonServiceProvider
         $this->app->singleton(QueueConfigDTO::class, static fn (Application $app): QueueConfigDTO => $app->make(GitSyncConfigDTO::class)->queue);
         $this->app->singleton(SafetyNetConfigDTO::class, static fn (Application $app): SafetyNetConfigDTO => $app->make(GitSyncConfigDTO::class)->safetyNet);
         $this->app->singleton(NotificationConfigDTO::class, static fn (Application $app): NotificationConfigDTO => $app->make(GitSyncConfigDTO::class)->notifications);
+        $this->app->singleton(HistoryConfigDTO::class, static fn (Application $app): HistoryConfigDTO => $app->make(GitSyncConfigDTO::class)->history);
     }
 
     private function registerGit(): void

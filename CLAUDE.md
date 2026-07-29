@@ -75,7 +75,8 @@ src/
 ├── Services/                    Process/ Git/ Sync/ Content/ Diagnostics/
 ├── Strategies/                  CommitSyncStrategy, PullRequestSyncStrategy
 ├── Notifications/               mail + optional Slack, sent inline on purpose
-├── Subscribers/                 ContentEventSubscriber, NotificationSubscriber
+├── Subscribers/                 ContentEventSubscriber, NotificationSubscriber, HistorySubscriber
+├── Widgets/RecentSyncsWidget    extends Statamic\Widgets\Widget — no interface exists
 └── Support/GitSyncConfigResolver.php
 ```
 
@@ -133,6 +134,16 @@ Slack is optional. `laravel/slack-notification-channel` is a **dev** dependency 
 
 A conflict fires both `ConflictDetected` and `SyncFailed`; only the conflict notification is sent.
 
+## History and the widget
+
+`HistorySubscriber` writes a JSONL line per run to `storage/statamic-git-sync/history.jsonl`; `RecentSyncsWidget` reads it. A file, not the cache — `cache:clear` is part of most deploys. A file, not a table — a flat-file Solo site often has no database.
+
+**It is a display, never a source of truth.** `FileHistoryRepository` catches everything and checks writability before writing, so a sync can never fail because its history could not be recorded. `HistoryCheck` reports an unwritable path as a *warning*. Do not make any of this throw.
+
+Runs that committed nothing are not recorded — the safety net would otherwise fill the file on a quiet site.
+
+`RecentSyncsWidget extends Statamic\Widgets\Widget` is the third framework-demanded inheritance; Statamic discovers widgets by that base class and offers no interface.
+
 ## Roadmap
 
-A control panel widget showing recent syncs (history persistence: JSONL under `storage/`), and GitLab/Gitea clients. Do not build ahead of these.
+GitLab and Gitea implementations of `PullRequestClientContract`. Do not build ahead of it.

@@ -27,6 +27,7 @@ final readonly class GitSyncConfigDTO
         public DebounceConfigDTO $debounce,
         public QueueConfigDTO $queue,
         public SafetyNetConfigDTO $safetyNet,
+        public HistoryConfigDTO $history,
         public NotificationConfigDTO $notifications,
         public LoggingConfigDTO $logging,
         public EventConfigDTO $events,
