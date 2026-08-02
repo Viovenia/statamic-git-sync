@@ -120,6 +120,8 @@ Every change lands with its test. Use `#[WithConfig]` from testbench for anythin
 
 SemVer from git tags. Currently below 1.0, where **Composer treats every minor as breaking** — `^0.1` does not allow `0.2`. Changelog entries are hand-written and land in the same pull request as the change.
 
+Pushing a `v*` tag runs `.github/workflows/release.yml`: it re-verifies the tagged commit, refuses if `CHANGELOG.md` has no section for that version, and publishes a GitHub release from that section. **It never tags anything itself** — deciding to release is a human act. Full procedure in `CONTRIBUTING.md`.
+
 `main` is protected: work on a branch and open a pull request. Merges are squash-only.
 
 ## Pull request mode

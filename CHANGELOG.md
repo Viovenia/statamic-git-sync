@@ -22,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **A "Recent content syncs" control panel widget**, fed by a JSONL history file under `storage/`. A file rather than the cache, because `cache:clear` is part of most deploys; a file rather than a database table, because a flat-file Solo site often has no database. It is a display, never a source of truth — writing it can never fail a sync, and an unwritable path is a warning in `doctor`, not an error.
 - `HistoryRepositoryContract` with file and null implementations, `HistorySubscriber`, and `HistoryCheck`.
+- **A release workflow.** Pushing a `v*` tag re-runs the full gate on that commit, refuses if `CHANGELOG.md` has no matching section, and publishes a GitHub release with that section as its notes. Deciding to release stays a human act — the workflow never tags anything itself.
 - **Translations for the control panel**, English and German, publishable with `vendor:publish --tag=statamic-git-sync-translations`. Console output stays English on purpose: a German error message in a deploy log is a German error message nobody can search for.
 - The widget lists **which** files a run touched, with their status and the `+/−` line counts, behind a native `<details>` toggle. Names and counts only — a stored diff would be a second copy of the content sitting in `storage/`, so the commit and the pull request are linked instead. Entries written before this existed keep reading; they simply have no file list.
 

@@ -1,0 +1,90 @@
+name: Release
+
+# Triggered by a tag you push by hand. Tagging stays a deliberate act: this
+# workflow only turns an existing tag into a GitHub release, it never decides
+# that something should be released.
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish the GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, gd
+          coverage: none
+
+      - uses: ramsey/composer-install@v3
+
+      # A tag on a red build is a release nobody can trust. The push
+      # workflows run in parallel on the same commit; this repeats the gate
+      # rather than assuming it.
+      - name: Verify the tagged commit
+        run: |
+          composer validate --strict
+          composer run check
+          composer run test:integration
+        env:
+          GIT_AUTHOR_NAME: CI
+          GIT_AUTHOR_EMAIL: ci@example.com
+          GIT_COMMITTER_NAME: CI
+          GIT_COMMITTER_EMAIL: ci@example.com
+
+      - name: Check that the tag matches a changelog heading
+        id: changelog
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+
+          if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${version}]' section. Move the Unreleased entries into one before tagging."
+            exit 1
+          fi
+
+          # Everything between this version's heading and the next one. The
+          # oldest version runs to the end of the file, so the link
+          # definitions down there are skipped rather than published as notes.
+          awk -v version="${version}" '
+            $0 ~ "^## \\[" version "\\]" { capture = 1; next }
+            capture && /^## \[/ { exit }
+            capture && /^\[[^]]+\]: http/ { next }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "::error::The '## [${version}]' section is empty."
+            exit 1
+          fi
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          case "$TAG" in
+            *-alpha*|*-beta*|*-rc*) prerelease="--prerelease" ;;
+          esac
+
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            $prerelease
