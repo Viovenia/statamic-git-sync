@@ -54,6 +54,8 @@ Use a real queue connection and run a worker.
 
 The path is wrong or there is no repository there. Either run `git init`, or point `repository.path` at the actual repository root — the default is `base_path()`, which is not always where the repository lives.
 
+If you are on Laravel Cloud, or in a container built from an immutable image, there is no repository *and there never will be*: those filesystems are ephemeral and belong to a single replica. Content saved in the control panel is discarded on the next deploy there regardless of this addon. See [where this works](installation.md#where-this-works).
+
 ## `Author identity unknown`
 
 git will not commit without one:

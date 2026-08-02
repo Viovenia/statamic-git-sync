@@ -33,7 +33,13 @@ final class RepositoryCheck implements HealthCheckContract
                 $this->id(),
                 $this->title(),
                 'No git repository at '.$this->locator->path(),
-                'Run `git init` there, or point [statamic-git-sync.repository.path] at the repository root.',
+                // The likeliest cause on a modern host is not a missing `git init`
+                // but a platform that never had a checkout to begin with, so the
+                // remedy names that case rather than leaving people to guess.
+                'Run `git init` there, or point [statamic-git-sync.repository.path] at the repository root. '
+                .'On Laravel Cloud, or in a container built from an immutable image, there is no repository '
+                .'to commit into and the filesystem is discarded on every deploy — this addon needs a '
+                .'persistent checkout. See docs/installation.md.',
             );
         }
 

@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The "no git repository" finding in `doctor` now names the likeliest cause on a modern host: a platform that never had a checkout. Laravel Cloud and immutable containers have ephemeral, per-replica filesystems, so there is nothing to commit into — and flat-file content editing does not survive there with or without this addon.
+
+### Documentation
+
+- A "Where this works" section in the README and `docs/installation.md`, with the deployment shapes this addon supports and the ones it cannot, quoting Laravel Cloud's own statement about ephemeral filesystems. The answer on those platforms is Statamic's Eloquent driver, at which point there are no files to version.
+
 ## [0.1.0] - 2026-08-02
 
 First release.
