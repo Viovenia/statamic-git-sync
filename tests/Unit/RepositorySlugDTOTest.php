@@ -31,7 +31,9 @@ final class RepositorySlugDTOTest extends TestCase
             'https with credentials' => ['https://marcel:ghp_secret@github.com/acme/site.git', 'acme/site'],
             'ssh protocol url' => ['ssh://git@github.com/acme/site.git', 'acme/site'],
             'trailing slash' => ['https://github.com/acme/site/', 'acme/site'],
-            'self hosted with nesting' => ['https://git.example.com/group/sub/site.git', 'sub/site'],
+            // GitLab groups nest: the whole path identifies one project.
+            'nested group' => ['https://gitlab.com/acme/websites/site.git', 'acme/websites/site'],
+            'nested group over ssh' => ['git@gitlab.com:acme/websites/site.git', 'acme/websites/site'],
             'a local path is not a slug' => ['/srv/repositories/site.git', null],
             'empty' => ['', null],
         ];
@@ -42,6 +44,24 @@ final class RepositorySlugDTOTest extends TestCase
     {
         $this->assertSame('acme/site', RepositorySlugDTO::fromString('acme/site')->toString());
         $this->assertSame('acme/site', RepositorySlugDTO::fromString('/acme/site/')->toString());
+    }
+
+    #[Test]
+    public function owner_and_name_split_at_the_last_segment(): void
+    {
+        $nested = RepositorySlugDTO::fromString('acme/websites/site');
+
+        $this->assertSame('acme/websites', $nested->owner());
+        $this->assertSame('site', $nested->name());
+    }
+
+    #[Test]
+    public function the_encoded_form_is_what_gitlab_wants_in_a_url_path(): void
+    {
+        $this->assertSame(
+            'acme%2Fwebsites%2Fsite',
+            RepositorySlugDTO::fromString('acme/websites/site')->encoded(),
+        );
     }
 
     #[Test]

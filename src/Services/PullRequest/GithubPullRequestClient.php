@@ -40,7 +40,9 @@ final class GithubPullRequestClient implements PullRequestClientContract
             'look for an open pull request',
             fn () => $this->request()->get($this->url($repository, 'pulls'), [
                 'state' => 'open',
-                'head' => $repository->owner.':'.$head->value,
+                // GitHub scopes a head branch by account; it never nests, so
+                // the owner is always a single segment here.
+                'head' => $repository->owner().':'.$head->value,
                 'per_page' => 1,
             ]),
         );

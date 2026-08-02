@@ -99,28 +99,32 @@ The allow list still applies first — git is only ever asked about `content.pat
 
 ## Another forge for pull request mode
 
-`PullRequestClientContract` has two methods, and the strategy knows nothing about GitHub:
+GitHub and GitLab ship. `PullRequestClientContract` has two methods, and the strategy knows nothing about either:
 
 ```php
 use Viovenia\GitSync\Contracts\PullRequestClientContract;
 
-final class GitlabPullRequestClient implements PullRequestClientContract
+final class GiteaPullRequestClient implements PullRequestClientContract
 {
     public function findOpen(RepositorySlugDTO $repository, BranchNameDTO $head): ?PullRequestDTO
     {
-        // GET /projects/{id}/merge_requests?state=opened&source_branch=…
+        // GET /repos/{owner}/{repo}/pulls?state=open&head=…
     }
 
     public function open(PullRequestRequestDTO $request): PullRequestDTO
     {
-        // POST /projects/{id}/merge_requests
+        // POST /repos/{owner}/{repo}/pulls
     }
 }
 ```
 
 ```php
-$this->app->singleton(PullRequestClientContract::class, GitlabPullRequestClient::class);
+$this->app->singleton(PullRequestClientContract::class, GiteaPullRequestClient::class);
 ```
+
+`RepositorySlugDTO` gives you what each API wants: `toString()` for a path, `encoded()` for one that goes in a URL segment, and `owner()` / `name()` split at the last segment. It keeps the *whole* path, because GitLab groups nest.
+
+The two shipped clients are worth reading first — the differences between them are larger than they look, which is why they are two classes rather than one with branches in it.
 
 Throw `PullRequestFailedException` rather than returning null on failure: it carries the retry decision, and a retry there is cheap because the commit and the push have already happened.
 

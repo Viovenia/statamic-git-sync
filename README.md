@@ -189,9 +189,16 @@ A dashboard widget showing the last few syncs — what was committed, what faile
 
 It reads a JSONL file under `storage/`, which survives the `cache:clear` in your deploy. Losing it costs the widget its contents and nothing else — git remains the record of what was committed.
 
+GitLab works too — merge requests instead of pull requests, nested groups included:
+
+```env
+STATAMIC_GIT_SYNC_PR_DRIVER=gitlab
+STATAMIC_GIT_SYNC_PR_TOKEN=glpat-…
+```
+
 ## Roadmap
 
-- GitLab and Gitea implementations of `PullRequestClientContract`.
+Nothing planned. Gitea and Forgejo would each be one class behind `PullRequestClientContract` — see [docs/advanced.md](docs/advanced.md) if you want one.
 
 ## Contributing
 

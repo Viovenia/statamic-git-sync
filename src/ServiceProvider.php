@@ -75,6 +75,7 @@ use Viovenia\GitSync\Services\Git\GitRepositoryLocator;
 use Viovenia\GitSync\Services\Git\PorcelainParser;
 use Viovenia\GitSync\Services\Process\ProcessRunner;
 use Viovenia\GitSync\Services\PullRequest\GithubPullRequestClient;
+use Viovenia\GitSync\Services\PullRequest\GitlabPullRequestClient;
 use Viovenia\GitSync\Services\Sync\SyncDispatcher;
 use Viovenia\GitSync\Services\Sync\SyncLock;
 use Viovenia\GitSync\Services\Sync\SyncManager;
@@ -256,6 +257,10 @@ final class ServiceProvider extends AddonServiceProvider
             PullRequestClientContract::class,
             static fn (Application $app): PullRequestClientContract => match ($app->make(PullRequestConfigDTO::class)->driver) {
                 PullRequestDriver::GitHub => new GithubPullRequestClient(
+                    $app->make(HttpFactory::class),
+                    $app->make(PullRequestConfigDTO::class),
+                ),
+                PullRequestDriver::GitLab => new GitlabPullRequestClient(
                     $app->make(HttpFactory::class),
                     $app->make(PullRequestConfigDTO::class),
                 ),

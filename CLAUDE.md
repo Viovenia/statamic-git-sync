@@ -146,4 +146,4 @@ Runs that committed nothing are not recorded — the safety net would otherwise 
 
 ## Roadmap
 
-GitLab and Gitea implementations of `PullRequestClientContract`. Do not build ahead of it.
+Empty. Gitea and Forgejo would each be one `PullRequestClientContract` implementation, but nobody has asked. Do not build ahead of it.

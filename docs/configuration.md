@@ -83,10 +83,10 @@ Only read when `strategy` is `pull-request`. Instead of pushing to the branch ev
 
 | Key | Env | Default | Effect |
 |---|---|---|---|
-| `driver` | `STATAMIC_GIT_SYNC_PR_DRIVER` | `github` | Which forge. Only GitHub today. |
-| `api_url` | `STATAMIC_GIT_SYNC_PR_API_URL` | `https://api.github.com` | Change for GitHub Enterprise. |
-| `token` | `STATAMIC_GIT_SYNC_PR_TOKEN` | `null` | Needs pull request write access on the repository. |
-| `repository` | `STATAMIC_GIT_SYNC_PR_REPOSITORY` | `null` | `owner/name`. Null derives it from the remote URL. |
+| `driver` | `STATAMIC_GIT_SYNC_PR_DRIVER` | `github` | `github` or `gitlab`. |
+| `api_url` | `STATAMIC_GIT_SYNC_PR_API_URL` | per driver | `https://api.github.com` or `https://gitlab.com/api/v4`. Change it for a self-hosted installation. |
+| `token` | `STATAMIC_GIT_SYNC_PR_TOKEN` | `null` | Needs write access to pull or merge requests. |
+| `repository` | `STATAMIC_GIT_SYNC_PR_REPOSITORY` | `null` | `owner/name`, or the full path for a nested GitLab group. Null derives it from the remote URL. |
 | `base` | `STATAMIC_GIT_SYNC_PR_BASE` | `main` | The branch the pull request asks to merge into. |
 | `title_template` | `STATAMIC_GIT_SYNC_PR_TITLE` | `Content changes from {head}` | Placeholders: `{summary}` `{count}` `{user}` `{head}` `{base}` `{files}`. |
 | `body_template` | `STATAMIC_GIT_SYNC_PR_BODY` | a note plus `{files}` | Same placeholders. |
@@ -102,6 +102,17 @@ STATAMIC_GIT_SYNC_PUSH=true
 STATAMIC_GIT_SYNC_PR_TOKEN=github_pat_…
 STATAMIC_GIT_SYNC_PR_BASE=main
 ```
+
+### GitLab
+
+```env
+STATAMIC_GIT_SYNC_PR_DRIVER=gitlab
+STATAMIC_GIT_SYNC_PR_TOKEN=glpat-…
+```
+
+The token needs the `api` scope. Nested groups work — `acme/websites/site` is one project path, and it is derived from the remote URL like everything else.
+
+Two GitLab quirks worth knowing, both handled for you: a merge request is a draft when its **title** starts with `Draft:` (there is no flag), and labels go along with the create call rather than in a second request.
 
 **Pitfall:** `push.enabled` must be on. Without it the branch never reaches the forge and the pull request would reference nothing. `doctor` reports it as an error.
 

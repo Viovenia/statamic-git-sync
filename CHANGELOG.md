@@ -23,9 +23,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **A "Recent content syncs" control panel widget**, fed by a JSONL history file under `storage/`. A file rather than the cache, because `cache:clear` is part of most deploys; a file rather than a database table, because a flat-file Solo site often has no database. It is a display, never a source of truth — writing it can never fail a sync, and an unwritable path is a warning in `doctor`, not an error.
 - `HistoryRepositoryContract` with file and null implementations, `HistorySubscriber`, and `HistoryCheck`.
 
+- **GitLab support for pull request mode** (`pull_request.driver => 'gitlab'`). Merge requests through the v4 API, verified against GitLab's own documentation: the project is addressed by its URL-encoded full path, authentication is the `PRIVATE-TOKEN` header, the branches are `source_branch` / `target_branch`, open is `opened`, labels travel with the create call, drafts are a title prefix rather than a flag, and the number people see is `iid`.
+
 ### Changed
 
 - `FailureType` gained `PullRequestFailed`, which is retryable: when the forge call fails the commit and push have already succeeded, so a retry only re-attempts the proposal.
+- `RepositorySlugDTO` keeps the whole repository path rather than the last two segments, because GitLab groups nest: `acme/websites/site` is one project. `owner` and `name` are now methods that split at the last segment.
 
 ### Fixed
 
