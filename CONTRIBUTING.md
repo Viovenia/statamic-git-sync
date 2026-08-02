@@ -87,7 +87,30 @@ The `Release` workflow then:
 
 Composer derives versions from tags — there is deliberately no `version` key in `composer.json`.
 
-**Tagging is still not publishing.** The workflow creates a *GitHub* release. Until the repository is public and submitted to Packagist, `composer require viovenia/statamic-git-sync` finds nothing. See the table in the release-manager agent notes.
+**Tagging is still not publishing.** The workflow creates a *GitHub* release. What that means for `composer require`:
+
+| State | What a tag does |
+|---|---|
+| Repository private | Nothing installable. Composer cannot reach it. |
+| Public, not on Packagist | Installable only via an explicit `repositories` entry in the consumer's `composer.json`. |
+| On Packagist, hook active | A new version appears within a minute. |
+| On Packagist, no hook | Nothing until somebody presses Update on the package page. |
+
+### Publishing on Packagist, once
+
+1. Make the repository public — a deliberate, separate act:
+   `gh repo edit Viovenia/statamic-git-sync --visibility public --accept-visibility-change-consequences`
+2. Push the first tag so Packagist has a version to read.
+3. Submit `https://github.com/Viovenia/statamic-git-sync` at https://packagist.org/packages/submit while signed in to the account that should own the `viovenia` vendor namespace. **The first package published under a vendor claims that namespace**, so use the account you want to own it long-term.
+4. On the package page, connect the GitHub hook (Packagist offers a one-click GitHub integration). Without it, every future tag needs a manual Update.
+5. Add the badges to `README.md` — they 404 until the package exists, which is why they are not there yet:
+
+```markdown
+[![Packagist Version](https://img.shields.io/packagist/v/viovenia/statamic-git-sync)](https://packagist.org/packages/viovenia/statamic-git-sync)
+[![Downloads](https://img.shields.io/packagist/dt/viovenia/statamic-git-sync)](https://packagist.org/packages/viovenia/statamic-git-sync)
+```
+
+A package name on Packagist can be abandoned but not truly deleted, and the code is public from step 1 onwards. Both are worth being sure about before step 3.
 
 ### If the workflow fails
 
