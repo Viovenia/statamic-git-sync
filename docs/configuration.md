@@ -179,6 +179,8 @@ A file rather than the cache, because `cache:clear` is part of most deploys and 
 
 **This is a display, never a source of truth.** Git is the record of what was committed. Losing the file costs the widget its contents and nothing else.
 
+Each entry holds the outcome, the file **paths** and their status, the `+/−` line counts, the commit or pull request, and how long the run took. It never holds file *contents*: that would be a second copy of the site in `storage/`, so the widget links to the commit instead.
+
 **Pitfall:** writing history can never fail a sync — an unwritable path leaves one debug log line, and `doctor` reports it as a *warning* rather than an error.
 
 **Pitfall:** runs that found nothing to commit are not recorded. On a quiet site the safety net alone would otherwise write "nothing to commit" every fifteen minutes.

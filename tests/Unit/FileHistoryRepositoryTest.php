@@ -8,7 +8,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Viovenia\GitSync\DataTransferObjects\Config\HistoryConfigDTO;
+use Viovenia\GitSync\DataTransferObjects\History\HistoryFileDTO;
 use Viovenia\GitSync\DataTransferObjects\History\SyncHistoryEntryDTO;
+use Viovenia\GitSync\Enums\FileStatus;
 use Viovenia\GitSync\Enums\SyncOutcome;
 use Viovenia\GitSync\Enums\SyncTrigger;
 use Viovenia\GitSync\Repositories\FileHistoryRepository;
@@ -115,6 +117,76 @@ final class FileHistoryRepositoryTest extends TestCase
         $this->assertSame([], $repository->recent(5));
     }
 
+    /**
+     * A history file written by an earlier release has no `paths` key. It has
+     * to keep working, because the widget reads whatever is already on disk
+     * after an upgrade.
+     */
+    #[Test]
+    public function an_entry_written_before_paths_existed_still_reads(): void
+    {
+        $legacy = [
+            'at' => 1_785_326_400,
+            'trigger' => 'content_event',
+            'outcome' => 'committed',
+            'files' => 2,
+            'commit' => 'a4f2c11',
+            'message' => 'content: home.md',
+            'pull_request_url' => null,
+            'pull_request_number' => null,
+            'failure' => null,
+            'duration_ms' => 184,
+        ];
+
+        mkdir(dirname($this->path), 0o755, true);
+        file_put_contents($this->path, json_encode($legacy).PHP_EOL);
+
+        $entry = $this->repository()->recent(1)[0] ?? null;
+
+        $this->assertNotNull($entry);
+        $this->assertSame(2, $entry->files);
+        $this->assertSame([], $entry->paths);
+        $this->assertFalse($entry->hasStat());
+    }
+
+    #[Test]
+    public function file_paths_and_line_counts_survive_a_round_trip(): void
+    {
+        $repository = $this->repository();
+        $repository->record($this->entry(1_000));
+
+        $entry = $repository->recent(1)[0];
+
+        $this->assertCount(1, $entry->paths);
+        $this->assertSame('content/home.md', $entry->paths[0]->path);
+        $this->assertSame(FileStatus::Modified, $entry->paths[0]->status);
+        $this->assertSame('+4 −1', $entry->stat());
+        $this->assertTrue($entry->hasStat());
+    }
+
+    #[Test]
+    public function a_rename_keeps_both_of_its_paths(): void
+    {
+        $repository = $this->repository();
+        $repository->record(new SyncHistoryEntryDTO(
+            at: 2_000,
+            trigger: SyncTrigger::Console,
+            outcome: SyncOutcome::Committed,
+            files: 1,
+            paths: [new HistoryFileDTO('content/new.md', FileStatus::Renamed, 'content/old.md')],
+            insertions: 0,
+            deletions: 0,
+            commit: 'a4f2c11',
+            message: 'content: new.md',
+            pullRequestUrl: null,
+            pullRequestNumber: null,
+            failure: null,
+            durationMs: 5,
+        ));
+
+        $this->assertSame('content/old.md → content/new.md', $repository->recent(1)[0]->paths[0]->describe());
+    }
+
     #[Test]
     public function a_round_trip_keeps_every_field(): void
     {
@@ -124,6 +196,12 @@ final class FileHistoryRepositoryTest extends TestCase
             trigger: SyncTrigger::ContentEvent,
             outcome: SyncOutcome::Committed,
             files: 3,
+            paths: [
+                new HistoryFileDTO('content/home.md', FileStatus::Modified),
+                new HistoryFileDTO('content/new.md', FileStatus::Renamed, 'content/old.md'),
+            ],
+            insertions: 12,
+            deletions: 3,
             commit: 'a4f2c11',
             message: 'content: home.md',
             pullRequestUrl: 'https://github.com/acme/site/pull/42',
@@ -160,6 +238,9 @@ final class FileHistoryRepositoryTest extends TestCase
             trigger: SyncTrigger::Console,
             outcome: SyncOutcome::Committed,
             files: 1,
+            paths: [new HistoryFileDTO('content/home.md', FileStatus::Modified)],
+            insertions: 4,
+            deletions: 1,
             commit: 'a4f2c11',
             message: 'content: home.md',
             pullRequestUrl: null,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Viovenia\GitSync\DataTransferObjects\History;
 
+use Viovenia\GitSync\DataTransferObjects\Content\ChangedFileDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\SyncContextDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\SyncResultDTO;
 use Viovenia\GitSync\Enums\SyncOutcome;
@@ -18,11 +19,15 @@ use Viovenia\GitSync\Enums\SyncTrigger;
  */
 final readonly class SyncHistoryEntryDTO
 {
+    /** @param list<HistoryFileDTO> $paths */
     public function __construct(
         public int $at,
         public SyncTrigger $trigger,
         public SyncOutcome $outcome,
         public int $files,
+        public array $paths,
+        public int $insertions,
+        public int $deletions,
         public ?string $commit,
         public ?string $message,
         public ?string $pullRequestUrl,
@@ -33,11 +38,19 @@ final readonly class SyncHistoryEntryDTO
 
     public static function fromResult(SyncContextDTO $context, SyncResultDTO $result): self
     {
+        $stat = $result->commit?->stat;
+
         return new self(
             at: time(),
             trigger: $context->trigger,
             outcome: $result->outcome,
             files: $result->changes->count(),
+            paths: array_map(
+                static fn (ChangedFileDTO $file): HistoryFileDTO => HistoryFileDTO::fromChangedFile($file),
+                $result->changes->files,
+            ),
+            insertions: $stat !== null ? $stat->insertions : 0,
+            deletions: $stat !== null ? $stat->deletions : 0,
             commit: $result->commit?->shortSha(),
             message: $result->commit !== null ? $result->commit->subject : $result->reason,
             pullRequestUrl: $result->pullRequest?->url,
@@ -55,6 +68,12 @@ final readonly class SyncHistoryEntryDTO
             'trigger' => $this->trigger->value,
             'outcome' => $this->outcome->value,
             'files' => $this->files,
+            'paths' => array_map(
+                static fn (HistoryFileDTO $file): array => $file->toArray(),
+                $this->paths,
+            ),
+            'insertions' => $this->insertions,
+            'deletions' => $this->deletions,
             'commit' => $this->commit,
             'message' => $this->message,
             'pull_request_url' => $this->pullRequestUrl,
@@ -86,6 +105,9 @@ final readonly class SyncHistoryEntryDTO
             trigger: $trigger,
             outcome: $outcome,
             files: is_int($data['files'] ?? null) ? $data['files'] : 0,
+            paths: self::paths($data),
+            insertions: is_int($data['insertions'] ?? null) ? $data['insertions'] : 0,
+            deletions: is_int($data['deletions'] ?? null) ? $data['deletions'] : 0,
             commit: self::nullableString($data, 'commit'),
             message: self::nullableString($data, 'message'),
             pullRequestUrl: self::nullableString($data, 'pull_request_url'),
@@ -98,6 +120,43 @@ final readonly class SyncHistoryEntryDTO
     public function successful(): bool
     {
         return $this->outcome->successful();
+    }
+
+    /**
+     * Entries written before file paths were recorded simply have none.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<HistoryFileDTO>
+     */
+    private static function paths(array $data): array
+    {
+        $raw = $data['paths'] ?? [];
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $files = [];
+
+        foreach ($raw as $entry) {
+            $file = is_array($entry) ? HistoryFileDTO::fromArray($entry) : null;
+
+            if ($file !== null) {
+                $files[] = $file;
+            }
+        }
+
+        return $files;
+    }
+
+    public function stat(): string
+    {
+        return sprintf('+%d −%d', $this->insertions, $this->deletions);
+    }
+
+    public function hasStat(): bool
+    {
+        return $this->insertions > 0 || $this->deletions > 0;
     }
 
     /** @param array<string, mixed> $data */

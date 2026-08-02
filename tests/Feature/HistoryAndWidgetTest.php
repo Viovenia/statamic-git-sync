@@ -10,6 +10,7 @@ use Viovenia\GitSync\Contracts\HistoryRepositoryContract;
 use Viovenia\GitSync\DataTransferObjects\Content\ChangedFileDTO;
 use Viovenia\GitSync\DataTransferObjects\Content\ChangeSetDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\CommitReferenceDTO;
+use Viovenia\GitSync\DataTransferObjects\Git\DiffStatDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\DurationDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\FailureDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\SyncContextDTO;
@@ -66,6 +67,18 @@ final class HistoryAndWidgetTest extends TestCase
 
         $this->assertStringContainsString('a4f2c11', $html);
         $this->assertStringContainsString('content: home.md', $html);
+    }
+
+    #[Test]
+    public function the_widget_lists_the_files_and_the_line_counts(): void
+    {
+        event(new SyncCompleted($this->context(), $this->committedResult()));
+
+        $html = $this->render();
+
+        $this->assertStringContainsString('content/home.md', $html);
+        $this->assertStringContainsString('Show the files', $html);
+        $this->assertStringContainsString('+7 −2', $html);
     }
 
     #[Test]
@@ -141,7 +154,7 @@ final class HistoryAndWidgetTest extends TestCase
     {
         return SyncResultDTO::committed(
             ChangeSetDTO::of(new ChangedFileDTO('content/home.md', FileStatus::Modified)),
-            new CommitReferenceDTO('a4f2c11deadbeef', 'content: home.md'),
+            new CommitReferenceDTO('a4f2c11deadbeef', 'content: home.md', new DiffStatDTO(7, 2)),
             null,
             DurationDTO::zero(),
         );
