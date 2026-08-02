@@ -8,59 +8,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-### Added
-
-- **Pull request mode** (`strategy => 'pull-request'`). Commits the change, pushes the branch this instance is on, and opens a pull request against a configurable base branch instead of pushing straight to it — something the built-in Pro automation cannot do. Reuses an already open pull request by default, so a busy editor produces one pull request rather than one per debounce window.
-- `PullRequestClientContract` with a GitHub REST implementation, so a second forge is a new class rather than a change to the strategy.
-- `PullRequestOpened` event, fired only when a pull request is actually created.
-- `PullRequestCheck` in `doctor`: token present, pushing enabled, repository slug derivable, and the head branch distinct from the base — the mistake everybody makes on their first afternoon with this mode.
-- `SyncResultDTO::$pullRequest`, and the pull request in the log context of a run.
-- `GitRepositoryContract::remoteUrl()`.
-
-- **Notifications** for failures, conflicts, opened pull requests and — off by default — successful commits. Built on Laravel's notification system with mail out of the box and optional Slack via `laravel/slack-notification-channel`. Sent inline rather than queued, because a failure notification that depends on the queue is useless exactly when the queue is what broke.
-- `NotificationCheck` in `doctor`: notifications enabled without a recipient is an error, a Slack channel without the channel package a warning.
-
-- **A "Recent content syncs" control panel widget**, fed by a JSONL history file under `storage/`. A file rather than the cache, because `cache:clear` is part of most deploys; a file rather than a database table, because a flat-file Solo site often has no database. It is a display, never a source of truth — writing it can never fail a sync, and an unwritable path is a warning in `doctor`, not an error.
-- `HistoryRepositoryContract` with file and null implementations, `HistorySubscriber`, and `HistoryCheck`.
-- **A release workflow.** Pushing a `v*` tag re-runs the full gate on that commit, refuses if `CHANGELOG.md` has no matching section, and publishes a GitHub release with that section as its notes. Deciding to release stays a human act — the workflow never tags anything itself.
-- **Translations for the control panel**, English and German, publishable with `vendor:publish --tag=statamic-git-sync-translations`. Console output stays English on purpose: a German error message in a deploy log is a German error message nobody can search for.
-- The widget lists **which** files a run touched, with their status and the `+/−` line counts, behind a native `<details>` toggle. Names and counts only — a stored diff would be a second copy of the content sitting in `storage/`, so the commit and the pull request are linked instead. Entries written before this existed keep reading; they simply have no file list.
-
-- **GitLab support for pull request mode** (`pull_request.driver => 'gitlab'`). Merge requests through the v4 API, verified against GitLab's own documentation: the project is addressed by its URL-encoded full path, authentication is the `PRIVATE-TOKEN` header, the branches are `source_branch` / `target_branch`, open is `opened`, labels travel with the create call, drafts are a title prefix rather than a flag, and the number people see is `iid`.
-
-### Changed
-
-- `FailureType` gained `PullRequestFailed`, which is retryable: when the forge call fails the commit and push have already succeeded, so a retry only re-attempts the proposal.
-- `RepositorySlugDTO` keeps the whole repository path rather than the last two segments, because GitLab groups nest: `acme/websites/site` is one project. `owner` and `name` are now methods that split at the last segment.
-
-### Fixed
-
-- **A file staged by somebody else no longer rides along with a content commit.** `git commit` commits the whole index, so anything an operator had staged by hand — `app/Secret.php`, a half-finished change, anything — was committed under a "content:" message and pushed with it. Commits are now restricted to the changed content paths with `--only`. The allow list had always protected *staging*; it turns out it never protected *committing*.
-- **A repository in the middle of a merge, rebase or cherry-pick is no longer committed on top of.** Doing so buried somebody's unresolved conflict under an automated commit, possibly with conflict markers in the content. The run now stops with `RepositoryBusyException` (not retryable) and says how to resolve it, and `doctor` reports the state as an error.
-
-Both were found by integration tests written to probe the situations an unattended process meets eventually — pre-staged files, failing hooks, half-finished merges, ignored content paths, permission changes, symlinks. The other five behave correctly and now have tests saying so.
-
-- A partially overridden config section no longer silences the part it did not mention. Laravel's `mergeConfigFrom` is a shallow merge, so a published config file that sets only some keys of a section replaces the package default for that whole section — which would have left `notifications.on` empty while `doctor` still reported notifications as enabled. A missing list now means "the defaults" rather than "nothing".
-
-## [0.1.0] - 2026-07-29
+## [0.1.0] - 2026-08-02
 
 First release.
 
-### Added
+### Syncing
 
-- Automatic commits on Statamic content events, individually configurable per event.
-- Trailing-edge debouncing: an editing session becomes one commit instead of one commit per save.
-- A scheduled safety net that commits anything the event path missed, so a flushed cache or a stopped queue worker costs a delay rather than a commit.
-- Optional `pull --rebase` (or merge) and `push`, with conflicts aborted and the working tree restored.
-- Path allow list plus exclude globs, so an unrelated change can never ride along with a content commit.
-- Commit message templates with `{summary}`, `{count}`, `{user}`, `{date}` and `{files}`, and a `Committed-by: statamic-git-sync` trailer as a loop guard.
+- Automatic commits on Statamic content events — entries, terms, taxonomies, globals, navs, assets, collections, blueprints, fieldsets, forms, users, roles and sites, each switchable on its own.
+- Trailing-edge debouncing, so an editing session becomes one commit rather than one commit per save. Falls back to committing immediately, with a warning from `doctor`, when the cache store cannot hold atomic locks.
+- A scheduled safety net that commits whatever the event path missed. This is what makes a flushed cache or a stopped queue worker cost a delay rather than a commit.
+- Only the configured paths are committed. Not "mostly": `git commit --only` restricts each commit to the paths that run staged, so a file somebody staged by hand stays out of it and stays staged.
+- Nothing is committed on top of a half-finished merge, rebase or cherry-pick. Burying somebody's unresolved conflict under an automated commit is worse than waiting for them.
+- Optional `pull --rebase` or merge before pushing, with conflicts aborted and the working tree restored exactly as it was found.
+- Commit messages from a template — `{summary}`, `{count}`, `{user}`, `{date}`, `{files}` — with a `Committed-by: statamic-git-sync` trailer as the loop guard.
 - The control panel user is credited as the commit author, with a configurable fallback for console and scheduled runs.
+
+### Pull request mode
+
+- `strategy => 'pull-request'` pushes the branch the instance is on and opens a pull request against a base branch instead of pushing straight to it — something the built-in Pro automation cannot do.
+- It never checks out another branch: that would swap content files on disk underneath the editor who just saved them. `doctor` refuses a setup whose head and base are the same.
+- Reuses an already open pull request, so an active editor produces one pull request rather than one per debounce window.
+- GitHub and GitLab, each behind `PullRequestClientContract`. GitLab means merge requests: URL-encoded project paths including nested groups, `PRIVATE-TOKEN` authentication, `source_branch` / `target_branch`, and drafts as a title prefix.
+
+### Telling you about it
+
+- Notifications for failures, conflicts and opened pull requests, plus successful commits if you want them. Mail out of the box, Slack with `laravel/slack-notification-channel`. Sent inline rather than queued, because a failure notification that depends on the queue is useless exactly when the queue is what broke.
+- A "Recent content syncs" control panel widget listing which files each run touched, their status, the `+/−` line counts and a link to the commit or pull request. Backed by a JSONL file under `storage/` that survives the `cache:clear` in your deploy.
+- Six events — `SyncStarted`, `SyncCompleted`, `SyncSkipped`, `SyncFailed`, `ConflictDetected`, `PullRequestOpened` — each carrying typed DTOs rather than loose scalars.
+- English and German translations for the control panel. Console output stays English on purpose: an error message in a deploy log is worth more when it can be searched for.
+
+### Finding out what is wrong
+
 - `statamic:git-sync`, `statamic:git-sync:status` and `statamic:git-sync:doctor`. The doctor exits non-zero on problems, so it works as a deploy gate.
-- Ten health checks covering the git binary, repository, identity, branch, remote, content paths, cache locks, queue driver, safety net and configuration.
-- `SyncStarted`, `SyncCompleted`, `SyncSkipped`, `SyncFailed` and `ConflictDetected` events, each carrying typed DTOs.
-- Contracts for every layer, so commit messages, path filtering, sync strategies and health checks can all be replaced without forking.
+- Thirteen health checks: configuration, git binary, repository state, git identity, branch, remote, content paths, pull request setup, notifications, history file, cache lock support, queue driver and the safety net. Each one says what to do about what it found.
 - Credentials in remote URLs are redacted from logs and exception messages.
-- Support for Statamic 5 and 6 on PHP 8.2, 8.3 and 8.4.
+- Failures are classified rather than guessed at: a lost network on push retries with backoff, a missing git binary does not, and a conflict never does because it needs a person.
+
+### For anyone extending it
+
+- Sixteen contracts, one per moving part. Commit messages, path filtering, sync strategies, forge clients and health checks can all be replaced from your own service provider without forking.
+- Nothing throws into a control panel save request. `SyncManager::sync()` never throws; the subscriber only queues.
+
+### Supported
+
+- PHP 8.2, 8.3 and 8.4. Statamic 5 and 6. Works on Statamic Solo, which is the point.
 
 [Unreleased]: https://github.com/Viovenia/statamic-git-sync/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Viovenia/statamic-git-sync/releases/tag/v0.1.0
