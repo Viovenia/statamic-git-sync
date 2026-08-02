@@ -36,6 +36,7 @@ And when something goes wrong it does the boring, safe thing: a conflicting reba
 
 ## Requirements
 
+- **A persistent filesystem holding a real git checkout.** Laravel Cloud and immutable containers have ephemeral, per-replica filesystems: content saved in the control panel is discarded on the next deploy there whether this addon is installed or not. On those platforms the answer is Statamic's Eloquent driver, and there is nothing for this addon to version — [the full table is in the docs](docs/installation.md#where-this-works)
 - PHP 8.2+
 - Statamic 5 or 6
 - A queue worker (`php artisan queue:work`) — with the `sync` driver every commit would happen inside the save request

@@ -1,5 +1,27 @@
 # Installation
 
+## Where this works
+
+This addon commits files on the server it runs on. That needs a **persistent filesystem holding a real git checkout** — which is what a flat-file Statamic site usually has, and what some modern hosts deliberately do not.
+
+| Setup | Works | Why |
+|---|---|---|
+| VPS, managed or shared hosting with a checkout | yes | The case this is built for. |
+| Docker with `content/` **and** `.git` on a mounted volume, one replica, git in the image | yes | The state survives the container. |
+| Docker from an immutable image, no volume | no | Nothing to commit into, and the layer is gone on the next deploy. |
+| Laravel Cloud | no | See below. |
+| Laravel Cloud or containers with Statamic's Eloquent driver | not applicable | Content lives in the database. There are no files to version, so leave the addon off. |
+
+### Why not Laravel Cloud
+
+From Laravel Cloud's own documentation:
+
+> Environment filesystems are ephemeral, meaning files may not persist across requests or jobs, and are reset with new deployments. Each replica has its own filesystem, so it should be treated as temporary, unshared disk space.
+
+Worth being clear about what that means: **flat-file content editing does not survive there at all**, with or without this addon. An entry saved in the control panel lands in one replica's filesystem and is gone on the next deploy. The addon is not the limitation — it only makes the limitation visible, because `statamic:git-sync:doctor` reports the missing repository instead of failing quietly.
+
+If you are on such a platform and want to keep editing content, the answer is Statamic's Eloquent driver — content in the database — and then this addon has nothing to do.
+
 ## Requirements
 
 | | |

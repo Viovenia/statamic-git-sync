@@ -22,6 +22,20 @@ final class DoctorCommandTest extends TestCase
             ->assertExitCode(1);
     }
 
+    /**
+     * The people most likely to see this are on a platform that never had a
+     * checkout, and they are not reading the README at that moment.
+     */
+    #[Test]
+    public function a_missing_repository_points_at_the_deployment_shape_not_just_git_init(): void
+    {
+        Process::fake(['*' => Process::result('git version 2.50.1')]);
+
+        $this->artisan('statamic:git-sync:doctor')
+            ->expectsOutputToContain('persistent checkout')
+            ->assertExitCode(1);
+    }
+
     #[Test]
     public function it_reports_a_missing_git_binary_with_something_to_do_about_it(): void
     {
