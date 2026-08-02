@@ -9,6 +9,7 @@ enum FailureType: string
     case Configuration = 'configuration';
     case GitBinaryMissing = 'git_binary_missing';
     case RepositoryMissing = 'repository_missing';
+    case RepositoryBusy = 'repository_busy';
     case CommandFailed = 'command_failed';
     case RebaseConflict = 'rebase_conflict';
     case LockUnavailable = 'lock_unavailable';

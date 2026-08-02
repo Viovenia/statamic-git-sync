@@ -68,18 +68,45 @@ final class GitRepository implements GitRepositoryContract
         );
     }
 
-    public function commit(string $message, ?CommitAuthorDTO $author, bool $allowEmpty, bool $sign): CommitReferenceDTO
-    {
+    public function commit(
+        string $message,
+        ?CommitAuthorDTO $author,
+        bool $allowEmpty,
+        bool $sign,
+        PathCollectionDTO $paths,
+    ): CommitReferenceDTO {
+        // `--only` restricts the commit to these paths and ignores whatever
+        // else sits in the index. Without it, a file somebody staged by hand
+        // and forgot about would be committed under a "content" message — and
+        // pushed, if pushing is on.
         $command = $this->commands->new()
             ->add('commit', '--message', $message)
+            ->addIf(! $paths->isEmpty(), '--only')
             ->addIf($allowEmpty, '--allow-empty')
             ->addIf($sign, '--gpg-sign')
             ->addIf($author !== null, '--author', $author?->toGitIdentity() ?? '')
+            ->paths($paths)
             ->build();
 
         $this->mustRun($command);
 
         return $this->head();
+    }
+
+    public function pendingOperation(): ?string
+    {
+        $git = $this->locator->path().DIRECTORY_SEPARATOR.'.git';
+
+        // Read from disk rather than parsed from `git status`: these marker
+        // files are git's own record and their names have been stable for
+        // well over a decade.
+        return match (true) {
+            file_exists($git.DIRECTORY_SEPARATOR.'MERGE_HEAD') => 'merge',
+            file_exists($git.DIRECTORY_SEPARATOR.'rebase-merge'),
+            file_exists($git.DIRECTORY_SEPARATOR.'rebase-apply') => 'rebase',
+            file_exists($git.DIRECTORY_SEPARATOR.'CHERRY_PICK_HEAD') => 'cherry-pick',
+            default => null,
+        };
     }
 
     public function currentBranch(): BranchNameDTO

@@ -15,6 +15,7 @@ use Viovenia\GitSync\DataTransferObjects\Git\PushResultDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\DurationDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\SyncContextDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\SyncResultDTO;
+use Viovenia\GitSync\Exceptions\RepositoryBusyException;
 
 /**
  * Commit locally, then optionally integrate and push.
@@ -46,6 +47,7 @@ final class CommitSyncStrategy implements SyncStrategyContract
         $start = microtime(true);
 
         $this->locator->ensureExists();
+        $this->guardNotBusy();
 
         $changes = $this->repository
             ->status($this->config->content->paths)
@@ -70,6 +72,7 @@ final class CommitSyncStrategy implements SyncStrategyContract
             $context->author,
             $this->config->commit->allowEmpty,
             $this->config->commit->sign,
+            $changes->paths(),
         );
 
         $branch = $this->targetBranch();
@@ -106,5 +109,19 @@ final class CommitSyncStrategy implements SyncStrategyContract
     private function targetBranch(): BranchNameDTO
     {
         return $this->config->push->branch ?? $this->repository->currentBranch();
+    }
+
+    /**
+     * Somebody is mid-merge or mid-rebase in this working tree. Committing on
+     * top would bury their unresolved conflict under an automated commit, so
+     * the run stops and says so.
+     */
+    private function guardNotBusy(): void
+    {
+        $operation = $this->repository->pendingOperation();
+
+        if ($operation !== null) {
+            throw RepositoryBusyException::during($operation, $this->locator->path());
+        }
     }
 }

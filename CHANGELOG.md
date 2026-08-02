@@ -32,6 +32,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **A file staged by somebody else no longer rides along with a content commit.** `git commit` commits the whole index, so anything an operator had staged by hand — `app/Secret.php`, a half-finished change, anything — was committed under a "content:" message and pushed with it. Commits are now restricted to the changed content paths with `--only`. The allow list had always protected *staging*; it turns out it never protected *committing*.
+- **A repository in the middle of a merge, rebase or cherry-pick is no longer committed on top of.** Doing so buried somebody's unresolved conflict under an automated commit, possibly with conflict markers in the content. The run now stops with `RepositoryBusyException` (not retryable) and says how to resolve it, and `doctor` reports the state as an error.
+
+Both were found by integration tests written to probe the situations an unattended process meets eventually — pre-staged files, failing hooks, half-finished merges, ignored content paths, permission changes, symlinks. The other five behave correctly and now have tests saying so.
+
 - A partially overridden config section no longer silences the part it did not mention. Laravel's `mergeConfigFrom` is a shallow merge, so a published config file that sets only some keys of a section replaces the package default for that whole section — which would have left `notifications.on` empty while `doctor` still reported notifications as enabled. A missing list now means "the defaults" rather than "nothing".
 
 ## [0.1.0] - 2026-07-29

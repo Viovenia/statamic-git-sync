@@ -31,6 +31,12 @@ interface GitRepositoryContract
     public function stage(PathCollectionDTO $paths): void;
 
     /**
+     * Commit **only** the given paths.
+     *
+     * Not whatever happens to be in the index: somebody may have staged an
+     * unrelated file by hand, and it must not ride along under a commit
+     * message that says "content".
+     *
      * @throws GitCommandFailedException
      */
     public function commit(
@@ -38,7 +44,14 @@ interface GitRepositoryContract
         ?CommitAuthorDTO $author,
         bool $allowEmpty,
         bool $sign,
+        PathCollectionDTO $paths,
     ): CommitReferenceDTO;
+
+    /**
+     * Which git operation is half-finished in this repository, if any:
+     * "merge", "rebase" or "cherry-pick".
+     */
+    public function pendingOperation(): ?string;
 
     public function currentBranch(): BranchNameDTO;
 

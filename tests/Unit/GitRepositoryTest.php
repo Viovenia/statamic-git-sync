@@ -42,10 +42,14 @@ final class GitRepositoryTest extends TestCase
             new CommitAuthorDTO('Marcel', 'marcel@example.com'),
             allowEmpty: false,
             sign: false,
+            paths: PathCollectionDTO::of('content/home.md'),
         );
 
+        // --only, and the paths after the separator: anything else somebody
+        // staged by hand must stay out of a content commit.
         Process::assertRan(fn (PendingProcess $process): bool => $process->command === [
-            'git', 'commit', '--message', 'content: home.md', '--author', 'Marcel <marcel@example.com>',
+            'git', 'commit', '--message', 'content: home.md', '--only',
+            '--author', 'Marcel <marcel@example.com>', '--', 'content/home.md',
         ]);
 
         $this->assertSame('2f1a3c4', $commit->shortSha());
