@@ -96,6 +96,10 @@ Each arrow is a contract, bound as a singleton in `ServiceProvider`.
 
 **Git is the state; the cache is only timing.** What gets committed is read from `git status` at the moment of the run. Losing the debounce marker costs bundling, never changes. The scheduled safety net (`statamic:git-sync --safety-net`, default `*/15 * * * *`) is what makes that guarantee hold. Do not make any code path depend on the cache being intact.
 
+**Commits are partial, on purpose.** `GitRepository::commit()` passes `--only` and the changed paths. `git commit` otherwise commits the whole index, so anything an operator staged by hand would ride along under a "content:" message. Never drop `--only`.
+
+**Never commit on top of a half-finished merge.** Both strategies call `guardNotBusy()` first and throw `RepositoryBusyException` (not retryable). Finishing somebody's merge automatically would bury their conflict.
+
 **Failure policy lives in `SyncManager::handleFailure()`, nowhere else.** Strategies throw; the manager decides what a failure means, fires the event, writes the log and returns a `SyncResultDTO`. Retryability comes from `FailureType`, not from guessing at a message.
 
 **Concurrency uses Laravel's own tools.** `Skip`, `WithoutOverlapping`, `ThrottlesExceptions` on the job; `SyncLock` for the console and scheduler paths, which the job middleware does not see. Do not hand-roll a second mechanism.

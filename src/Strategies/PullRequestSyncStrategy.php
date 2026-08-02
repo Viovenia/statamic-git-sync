@@ -22,6 +22,7 @@ use Viovenia\GitSync\DataTransferObjects\Sync\SyncContextDTO;
 use Viovenia\GitSync\DataTransferObjects\Sync\SyncResultDTO;
 use Viovenia\GitSync\Events\PullRequestOpened;
 use Viovenia\GitSync\Exceptions\ConfigurationException;
+use Viovenia\GitSync\Exceptions\RepositoryBusyException;
 
 /**
  * Commit, push the current branch, and open a pull request against the base
@@ -62,6 +63,7 @@ final class PullRequestSyncStrategy implements SyncStrategyContract
         $start = microtime(true);
 
         $this->locator->ensureExists();
+        $this->guardNotBusy();
 
         $changes = $this->repository
             ->status($this->config->content->paths)
@@ -96,6 +98,7 @@ final class PullRequestSyncStrategy implements SyncStrategyContract
             $context->author,
             $this->config->commit->allowEmpty,
             $this->config->commit->sign,
+            $changes->paths(),
         );
 
         // The push has to happen before the forge is asked for anything: a
@@ -187,6 +190,19 @@ final class PullRequestSyncStrategy implements SyncStrategyContract
             'pull_request.repository — it could not be derived from the URL of remote "'
             .$this->config->push->remote.'"',
         );
+    }
+
+    /**
+     * Somebody is mid-merge or mid-rebase in this working tree. Committing on
+     * top would bury their unresolved conflict under an automated commit.
+     */
+    private function guardNotBusy(): void
+    {
+        $operation = $this->repository->pendingOperation();
+
+        if ($operation !== null) {
+            throw RepositoryBusyException::during($operation, $this->locator->path());
+        }
     }
 
     /**

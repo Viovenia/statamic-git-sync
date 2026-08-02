@@ -109,6 +109,23 @@ That is the designed outcome of a forge failure: the commit and the push already
 
 If it says nothing was opened but there is no error either, `reuse_open` found an existing pull request for the branch and pushed the commits onto it — which is the normal case from the second sync onwards.
 
+## "The repository is in the middle of a merge"
+
+Somebody started a merge, rebase or cherry-pick in the working tree and did not finish it. Nothing is committed while that is true, because committing on top would bury the unresolved conflict under an automated commit.
+
+```bash
+git -C /var/www/site status
+git -C /var/www/site merge --continue   # or --abort
+```
+
+Content keeps piling up uncommitted in the meantime and is picked up by the next run — nothing is lost. `doctor` reports this as an error.
+
+## Something unrelated got committed
+
+It should not: commits are restricted to the changed content paths with `--only`, so a file you staged by hand stays staged and out of the commit.
+
+If you see something else in a `Committed-by: statamic-git-sync` commit, that is a bug worth reporting — with `git show --name-only` of the commit.
+
 ## A change was made on disk and never committed
 
 The event path only sees changes made through Statamic. Files edited over SSH or SFTP produce no event. That is what the safety net is for — within its cron window it commits them anyway. If it is not running:
