@@ -18,6 +18,12 @@ enum SyncTrigger: string
     /** The safety net caught changes that the debounced job never picked up. */
     case SafetyNet = 'safety_net';
 
+    /** The translated label for the control panel; the value stays English. */
+    public function label(): string
+    {
+        return (string) __('statamic-git-sync::enums.trigger.'.$this->value);
+    }
+
     /**
      * Whether this trigger is allowed to wait for the debounce window.
      *

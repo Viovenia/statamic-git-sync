@@ -175,6 +175,14 @@ Add the widget in `config/statamic/cp.php`:
 ],
 ```
 
+The widget follows the control panel language: English and German ship, and it uses whatever locale Statamic is in. To change the wording or add a language:
+
+```bash
+php artisan vendor:publish --tag=statamic-git-sync-translations
+```
+
+Console output (`sync`, `status`, `doctor`) is deliberately **not** translated — an error message in a deploy log is worth more when it can be searched for.
+
 A file rather than the cache, because `cache:clear` is part of most deploys and an empty widget after every deploy is worse than no widget. A file rather than a database table, because a flat-file Solo site often has no database, and a migration is a poor thing to force on somebody who only wanted their content committed.
 
 **This is a display, never a source of truth.** Git is the record of what was committed. Losing the file costs the widget its contents and nothing else.

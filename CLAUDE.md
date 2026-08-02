@@ -148,6 +148,8 @@ Runs that committed nothing are not recorded — the safety net would otherwise 
 
 `RecentSyncsWidget extends Statamic\Widgets\Widget` is the third framework-demanded inheritance; Statamic discovers widgets by that base class and offers no interface.
 
+**Control panel strings are translated, console strings are not.** `lang/en` and `lang/de`, namespace `statamic-git-sync::`. A German error in a deploy log is one nobody can search for. Enum **values** stay English — they go into the log and the history file, where a stable key beats a translated one; only `label()` is translated. `TranslationTest` walks every enum case in every locale, so a missing key fails the build instead of showing up as a raw key in somebody's dashboard.
+
 ## Roadmap
 
 Empty. Gitea and Forgejo would each be one `PullRequestClientContract` implementation, but nobody has asked. Do not build ahead of it.

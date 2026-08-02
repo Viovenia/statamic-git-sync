@@ -14,15 +14,15 @@
 
     @unless ($enabled)
         <div class="p-4 text-sm text-gray-600">
-            History is switched off, so there is nothing to show here.
-            Enable <code>statamic-git-sync.history.enabled</code> to use this widget.
+            {{ __('statamic-git-sync::widgets.recent_syncs.disabled') }}
+            {{ __('statamic-git-sync::widgets.recent_syncs.disabled_hint', ['key' => 'statamic-git-sync.history.enabled']) }}
         </div>
     @else
         @forelse ($entries as $entry)
             <div class="p-4 {{ ! $loop->last ? 'border-b' : '' }}">
                 <div class="flex items-baseline justify-between">
                     <div class="flex items-baseline">
-                        <span class="mr-2" title="{{ $entry->outcome->value }}">
+                        <span class="mr-2" title="{{ $entry->outcome->label() }}">
                             {{ $entry->successful() ? '✓' : '✕' }}
                         </span>
 
@@ -40,30 +40,32 @@
                             </div>
 
                             <div class="text-2xs text-gray-600 mt-1">
-                                {{ $entry->files }} file(s)
+                                {{ trans_choice('statamic-git-sync::widgets.recent_syncs.files', $entry->files) }}
                                 @if ($entry->hasStat())
                                     · {{ $entry->stat() }}
                                 @endif
-                                · {{ $entry->trigger->value }}
+                                · {{ $entry->trigger->label() }}
                                 · {{ \Illuminate\Support\Carbon::createFromTimestamp($entry->at)->diffForHumans() }}
                             </div>
                         </div>
                     </div>
 
-                    <span class="text-2xs text-gray-600">{{ $entry->durationMs }}ms</span>
+                    <span class="text-2xs text-gray-600">
+                        {{ __('statamic-git-sync::widgets.recent_syncs.duration', ['milliseconds' => $entry->durationMs]) }}
+                    </span>
                 </div>
 
                 @if ($entry->paths !== [])
                     <details class="mt-2">
                         <summary class="text-2xs text-gray-600 cursor-pointer">
-                            Show the files
+                            {{ __('statamic-git-sync::widgets.recent_syncs.show_files') }}
                         </summary>
 
                         <ul class="mt-2 ml-6">
                             @foreach ($entry->paths as $file)
                                 <li class="text-2xs text-gray-600 flex justify-between py-px">
                                     <code>{{ $file->describe() }}</code>
-                                    <span class="ml-4">{{ $file->status->value }}</span>
+                                    <span class="ml-4">{{ $file->status->label() }}</span>
                                 </li>
                             @endforeach
                         </ul>
@@ -72,7 +74,7 @@
             </div>
         @empty
             <div class="p-4 text-sm text-gray-600">
-                Nothing synced yet.
+                {{ __('statamic-git-sync::widgets.recent_syncs.empty') }}
             </div>
         @endforelse
     @endunless
