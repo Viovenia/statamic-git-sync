@@ -41,4 +41,4 @@ Every arrow is an interface. Every layer can be replaced or faked on its own, wh
 
 ## Roadmap
 
-- GitLab and Gitea implementations of `PullRequestClientContract`.
+Nothing planned. Gitea and Forgejo would each be one class behind `PullRequestClientContract` — [advanced.md](advanced.md) shows the shape.
