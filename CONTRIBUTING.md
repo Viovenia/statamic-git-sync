@@ -66,15 +66,38 @@ Merges are squash-only, so a tidy branch history is not required — a clear pul
 
 ## Releasing
 
-Maintainers only.
+Maintainers only. **Deciding to release stays a human act** — the workflow only turns a tag you pushed into a GitHub release, it never decides that something is ready.
 
-1. Move the `Unreleased` entries into a new version heading with today's date.
+1. Move the `Unreleased` entries into a `## [0.2.0] - YYYY-MM-DD` heading.
 2. Update the link definitions at the bottom of `CHANGELOG.md`.
-3. Commit, then tag: `git tag -a v0.2.0 -m "v0.2.0" && git push --tags`.
+3. Open a pull request with those two changes and merge it. `main` is protected, so this is not optional.
+4. Tag the merge commit and push it:
+
+```bash
+git checkout main && git pull
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin v0.2.0
+```
+
+The `Release` workflow then:
+
+- re-runs `composer validate --strict`, `check` and `test:integration` on the tagged commit, because a tag on a red build is a release nobody can trust;
+- refuses if `CHANGELOG.md` has no section matching the tag, or if that section is empty;
+- creates the GitHub release with that section as its notes, marking `-alpha`, `-beta` and `-rc` tags as pre-releases.
 
 Composer derives versions from tags — there is deliberately no `version` key in `composer.json`.
 
-**Tagging is not publishing.** Until the repository is public and submitted to Packagist, a tag is only a tag.
+**Tagging is still not publishing.** The workflow creates a *GitHub* release. Until the repository is public and submitted to Packagist, `composer require viovenia/statamic-git-sync` finds nothing. See the table in the release-manager agent notes.
+
+### If the workflow fails
+
+The tag exists but no release was created. Fix whatever it complained about, then delete and re-push the tag:
+
+```bash
+git tag -d v0.2.0 && git push origin :refs/tags/v0.2.0
+```
+
+Only ever do that for a tag whose release was never published.
 
 ## Before the repository goes public
 
