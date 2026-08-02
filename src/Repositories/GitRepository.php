@@ -13,6 +13,7 @@ use Viovenia\GitSync\DataTransferObjects\Git\BranchNameDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\CommandResultDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\CommitAuthorDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\CommitReferenceDTO;
+use Viovenia\GitSync\DataTransferObjects\Git\DiffStatDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\GitCommandDTO;
 use Viovenia\GitSync\DataTransferObjects\Git\PushResultDTO;
 use Viovenia\GitSync\Enums\PullStrategy;
@@ -207,11 +208,16 @@ final class GitRepository implements GitRepositoryContract
         return new PushResultDTO($remote, $branch, $forceWithLease);
     }
 
-    /** The commit HEAD points at right now. */
+    /**
+     * The commit HEAD points at right now, with its line counts.
+     *
+     * One `show` rather than a `log` plus a `diff`: the sha, the subject and
+     * the numstat all come out of the same invocation.
+     */
     private function head(): CommitReferenceDTO
     {
         $result = $this->mustRun(
-            $this->commands->new()->add('log', '-1', '--pretty=format:%H%n%s')->build(),
+            $this->commands->new()->add('show', '--numstat', '--pretty=format:%H%n%s')->build(),
         );
 
         $lines = $result->lines();
@@ -219,6 +225,7 @@ final class GitRepository implements GitRepositoryContract
         return new CommitReferenceDTO(
             sha: $lines[0] ?? '',
             subject: $lines[1] ?? '',
+            stat: DiffStatDTO::fromNumstat(array_slice($lines, 2)),
         );
     }
 
