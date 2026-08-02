@@ -25,4 +25,10 @@ enum SyncOutcome: string
     {
         return $this === self::Committed || $this === self::NothingToCommit;
     }
+
+    /** The translated label for the control panel; the value stays English. */
+    public function label(): string
+    {
+        return (string) __('statamic-git-sync::enums.outcome.'.$this->value);
+    }
 }

@@ -16,6 +16,17 @@ enum FileStatus: string
     case TypeChanged = 'type_changed';
 
     /**
+     * The translated label for the control panel.
+     *
+     * The enum value itself stays English: it goes into the log and the
+     * history file, where a stable key beats a translated one.
+     */
+    public function label(): string
+    {
+        return (string) __('statamic-git-sync::enums.status.'.$this->value);
+    }
+
+    /**
      * Map a two character porcelain v1 status code onto a status.
      *
      * The code carries the index state first and the working tree state

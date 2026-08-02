@@ -30,7 +30,7 @@ final class RecentSyncsWidget extends Widget
         $limit = (int) $this->config('limit', 5);
 
         return view('statamic-git-sync::widgets.recent-syncs', [
-            'title' => $this->config('title', 'Recent content syncs'),
+            'title' => $this->config('title', __('statamic-git-sync::widgets.recent_syncs.title')),
             'entries' => $this->history->recent(max(1, $limit)),
             'enabled' => $this->history->enabled(),
         ]);

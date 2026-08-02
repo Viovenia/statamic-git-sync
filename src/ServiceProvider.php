@@ -184,6 +184,7 @@ final class ServiceProvider extends AddonServiceProvider
         // is in the manifest. Registering it here as well keeps the widget
         // renderable in a test harness and before `statamic:install`.
         $this->loadViewsFrom(dirname(__DIR__).'/resources/views', 'statamic-git-sync');
+        $this->loadTranslationsFrom(dirname(__DIR__).'/lang', 'statamic-git-sync');
 
         $this->app->singleton(
             GitSyncConfigResolver::class,
