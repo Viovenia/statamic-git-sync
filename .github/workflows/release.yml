@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -30,7 +30,7 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, gd
           coverage: none
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
 
       # A tag on a red build is a release nobody can trust. The push
       # workflows run in parallel on the same commit; this repeats the gate

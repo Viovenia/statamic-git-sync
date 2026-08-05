@@ -35,7 +35,7 @@ jobs:
     name: PHP ${{ matrix.php }} · Statamic ${{ matrix.statamic }} · ${{ matrix.dependencies }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -46,7 +46,7 @@ jobs:
       - name: Pin Statamic
         run: composer require "statamic/cms:${{ matrix.statamic }}" --no-update --no-interaction
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
         with:
           dependency-versions: ${{ matrix.dependencies }}
 
